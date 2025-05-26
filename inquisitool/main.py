@@ -3,11 +3,13 @@ from contextlib import asynccontextmanager
 
 import aiohttp
 import click
+import redis.asyncio as redis
 import uvicorn
 from fastapi import FastAPI
 from pydantic import ValidationError
 
-from inquisitool.constants import LOG_LEVELS
+from inquisitool.constants import LOG_LEVELS, REDIS_URL
+from inquisitool.db import mongodb
 
 
 def create_app():
@@ -15,10 +17,16 @@ def create_app():
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        async with aiohttp.ClientSession() as session:
-            app.state.session = session
-            yield
-            await session.close()
+
+        logging.info("🟢️ Starting up resources...")
+        app.state.redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+        app.state.mongodb = mongodb
+        app.state.session = aiohttp.ClientSession()
+        yield
+        logging.info("🔴️ Shutting down resources...")
+        await app.state.redis_client.aclose()
+        await app.state.mongodb.close()
+        await app.state.session.close()
 
     app = FastAPI(lifespan=lifespan)
     return app
