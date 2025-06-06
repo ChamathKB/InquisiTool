@@ -7,9 +7,7 @@ from google.genai import types
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
 
-from inquisitool.constants import EMBEDDING_MODEL, GEMINI_API_KEY, QDRANT_URL
-
-qdrant = QdrantClient(location=QDRANT_URL)
+from inquisitool.constants import EMBEDDING_MODEL, GEMINI_API_KEY
 
 embeddings = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -43,13 +41,22 @@ def extract_text_from_pdf(pdf_path: str) -> list[str]:
     return text
 
 
-def create_collection(collection_name: str) -> dict:
+def create_collection(qdrant: QdrantClient, collection_name: str) -> dict:
     try:
         if not qdrant.collection_exists(collection_name):
             qdrant.create_collection(
                 collection_name=collection_name, vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
             )
         return {"message": "Collection created successfully!"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def delete_collection(qdrant: QdrantClient, collection_name: str) -> dict:
+    try:
+        if qdrant.collection_exists(collection_name):
+            qdrant.delete_collection(collection_name)
+        return {"message": "Collection deleted successfully!"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -71,7 +78,7 @@ def load_pdf_to_qdrant(pdf_path: str, qdrant: QdrantClient, collection_name: str
     qdrant.upsert(collection_name=collection_name, points=points)
 
 
-def qdrant_tool(pdf_path: str, collection_name: str) -> QdrantVectorSearchTool:
+def qdrant_tool(pdf_path: str, qdrant: QdrantClient, collection_name: str) -> QdrantVectorSearchTool:
 
     load_pdf_to_qdrant(pdf_path, qdrant, collection_name)
 
