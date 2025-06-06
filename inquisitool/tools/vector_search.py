@@ -43,6 +43,17 @@ def extract_text_from_pdf(pdf_path: str) -> list[str]:
     return text
 
 
+def create_collection(collection_name: str) -> dict:
+    try:
+        if not qdrant.collection_exists(collection_name):
+            qdrant.create_collection(
+                collection_name=collection_name, vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
+            )
+        return {"message": "Collection created successfully!"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def load_pdf_to_qdrant(pdf_path: str, qdrant: QdrantClient, collection_name: str) -> None:
 
     text_chunks = extract_text_from_pdf(pdf_path)
