@@ -66,21 +66,14 @@ def load_pdf_to_qdrant(pdf_path: str, qdrant: QdrantClient, collection_name: str
     text_chunks = extract_text_from_pdf(pdf_path)
 
     if qdrant.collection_exists(collection_name):
-        qdrant.delete_collection(collection_name)
-    qdrant.create_collection(
-        collection_name=collection_name, vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
-    )
-
-    points = []
-    for chunk in text_chunks:
-        embedding = get_embeddings(chunk)
-        points.append(PointStruct(id=str(uuid.uuid4()), vector=embedding, payload={"text": chunk}))
-    qdrant.upsert(collection_name=collection_name, points=points)
+        points = []
+        for chunk in text_chunks:
+            embedding = get_embeddings(chunk)
+            points.append(PointStruct(id=str(uuid.uuid4()), vector=embedding, payload={"text": chunk}))
+        qdrant.upsert(collection_name=collection_name, points=points)
 
 
 def qdrant_tool(pdf_path: str, qdrant: QdrantClient, collection_name: str) -> QdrantVectorSearchTool:
-
-    load_pdf_to_qdrant(pdf_path, qdrant, collection_name)
 
     qdrant_tool = QdrantVectorSearchTool(collection_name=collection_name, limit=3, score_threshold=0.35)
     return qdrant_tool
