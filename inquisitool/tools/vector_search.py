@@ -52,10 +52,10 @@ def create_collection(qdrant: QdrantClient, collection_name: str) -> dict:
         return {"error": str(e)}
 
 
-def delete_collection(qdrant: QdrantClient, collection_name: str) -> dict:
+def delete_collection(qdrant: QdrantClient, collection_id: str) -> dict:
     try:
-        if qdrant.collection_exists(collection_name):
-            qdrant.delete_collection(collection_name)
+        if qdrant.collection_exists(collection_id):
+            qdrant.delete_collection(collection_id)
         return {"message": "Collection deleted successfully!"}
     except Exception as e:
         return {"error": str(e)}
