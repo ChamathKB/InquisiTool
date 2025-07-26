@@ -7,9 +7,11 @@ import redis.asyncio as redis
 import uvicorn
 from fastapi import FastAPI
 from pydantic import ValidationError
+from qdrant_client import QdrantClient
 
-from inquisitool.constants import LOG_LEVELS, REDIS_URL
+from inquisitool.constants import LOG_LEVELS, QDRANT_URL, REDIS_URL
 from inquisitool.db import mongodb
+from inquisitool.routes import campaings, knowledgebases
 
 
 def create_app():
@@ -21,6 +23,7 @@ def create_app():
         logging.info("🟢️ Starting up resources...")
         app.state.redis_client = redis.from_url(REDIS_URL, decode_responses=True)
         app.state.mongodb = mongodb
+        app.state.qdrant = QdrantClient(location=QDRANT_URL)
         app.state.session = aiohttp.ClientSession()
         yield
         logging.info("🔴️ Shutting down resources...")
@@ -29,6 +32,8 @@ def create_app():
         await app.state.session.close()
 
     app = FastAPI(lifespan=lifespan)
+    app.include_router(campaings.router, prefix="/campaings")
+    app.include_router(knowledgebases.router, prefix="/knowledgebases")
     return app
 
 
