@@ -23,6 +23,7 @@ class Campaign(BaseModel):
     end_date: datetime
     status: str
     target_audience: str
+    number_of_questions: int
     created_at: datetime
     updated_at: datetime
 
