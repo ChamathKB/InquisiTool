@@ -50,6 +50,7 @@ async def get_mongodb() -> AsyncIOMotorDatabase:
     return mongodb.db
 
 
+# documents
 async def create_documents_collection(qdrant: QdrantClient, collection_name: str) -> dict:
     try:
         db = await get_mongodb()
@@ -97,6 +98,7 @@ async def upload_document(file_path: str, qdrant: QdrantClient, collection_id: s
         raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
 
 
+# campaigns
 async def create_campaign(campaign_data: dict) -> dict:
     try:
         db = await get_mongodb()
@@ -150,3 +152,64 @@ async def list_campaigns(skip: int = 0, limit: int = 10) -> list:
         return campaigns
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Campaign listing failed: {str(e)}")
+
+
+# Campaign run interactions
+async def create_interaction(interaction_data: dict) -> dict:
+    """Create a new user interaction record for a campaign run"""
+    try:
+        db = await get_mongodb()
+        interaction_data["created_at"] = datetime.utcnow()
+        interaction_data["interaction_id"] = str(uuid.uuid4())
+        result = await db["campaign_interactions"].insert_one(interaction_data)
+        return {"inserted_id": result.inserted_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Interaction creation failed: {str(e)}")
+
+
+async def get_interaction(interaction_id: str) -> dict:
+    """Get a specific interaction by ID"""
+    try:
+        db = await get_mongodb()
+        interaction = await db["campaign_interactions"].find_one({"interaction_id": interaction_id})
+        if interaction is None:
+            raise HTTPException(status_code=404, detail="Interaction not found")
+        return interaction
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Interaction retrieval failed: {str(e)}")
+
+
+async def update_interaction(interaction_id: str, update_data: dict) -> dict:
+    """Update an existing interaction"""
+    try:
+        db = await get_mongodb()
+        update_data["updated_at"] = datetime.utcnow()
+        result = await db["campaign_interactions"].update_one({"interaction_id": interaction_id}, {"$set": update_data})
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Interaction not found")
+        return {"modified_count": result.modified_count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Interaction update failed: {str(e)}")
+
+
+async def delete_interaction(interaction_id: str) -> dict:
+    """Delete an interaction"""
+    try:
+        db = await get_mongodb()
+        result = await db["campaign_interactions"].delete_one({"interaction_id": interaction_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Interaction not found")
+        return {"deleted_count": result.deleted_count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Interaction deletion failed: {str(e)}")
+
+
+async def list_interactions(campaign_id: str, skip: int = 0, limit: int = 10) -> list:
+    """List all interactions for a specific campaign"""
+    try:
+        db = await get_mongodb()
+        cursor = db["campaign_interactions"].find({"campaign_id": campaign_id}).skip(skip).limit(limit)
+        interactions = await cursor.to_list(length=limit)
+        return interactions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Interaction listing failed: {str(e)}")
