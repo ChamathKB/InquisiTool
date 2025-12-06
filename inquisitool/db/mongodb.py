@@ -167,11 +167,11 @@ async def create_interaction(interaction_data: dict) -> dict:
         raise HTTPException(status_code=500, detail=f"Interaction creation failed: {str(e)}")
 
 
-async def get_interaction(interaction_id: str) -> dict:
-    """Get a specific interaction by ID"""
+async def get_interaction(session_id: str) -> dict:
+    """Get a specific interaction by session_id"""
     try:
         db = await get_mongodb()
-        interaction = await db["campaign_interactions"].find_one({"interaction_id": interaction_id})
+        interaction = await db["campaign_interactions"].find_one({"session_id": session_id})
         if interaction is None:
             raise HTTPException(status_code=404, detail="Interaction not found")
         return interaction
@@ -179,12 +179,12 @@ async def get_interaction(interaction_id: str) -> dict:
         raise HTTPException(status_code=500, detail=f"Interaction retrieval failed: {str(e)}")
 
 
-async def update_interaction(interaction_id: str, update_data: dict) -> dict:
-    """Update an existing interaction"""
+async def update_interaction(session_id: str, update_data: dict) -> dict:
+    """Update an existing interaction by session_id"""
     try:
         db = await get_mongodb()
         update_data["updated_at"] = datetime.utcnow()
-        result = await db["campaign_interactions"].update_one({"interaction_id": interaction_id}, {"$set": update_data})
+        result = await db["campaign_interactions"].update_one({"session_id": session_id}, {"$set": update_data})
         if result.modified_count == 0:
             raise HTTPException(status_code=404, detail="Interaction not found")
         return {"modified_count": result.modified_count}

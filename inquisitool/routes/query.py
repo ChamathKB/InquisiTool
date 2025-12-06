@@ -1,82 +1,93 @@
-# query_hit -> invoke_agent -> agentgenerating questions -> question count limit -> end_survey
-
-from typing import List
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from inquisitool.agents.agents import ask, run_campaign
-from inquisitool.db.mongodb import create_interaction, list_interactions
+from inquisitool.agents.agents import ask
+from inquisitool.db.mongodb import (
+    create_interaction,
+    get_interaction,
+    update_interaction,
+)
 from inquisitool.utils import check_question_limit, end_survey
 
 router = APIRouter()
 
 
-class Query(BaseModel):
-    query_text: str
+class SurveyRequest(BaseModel):
     user_id: str
     session_id: str
     campaign_id: str
+    answer: Optional[str] = None
 
 
-class QueryResponse(BaseModel):
-    agent_response: str
-    questions_generated: List[str]
+class SurveyResponse(BaseModel):
+    question: str
     question_count: int
     survey_ended: bool
 
 
-@router.post("/query", response_model=QueryResponse)
-async def process_query(query: Query):
+@router.post("/survey", response_model=SurveyResponse)
+async def process_survey(request: SurveyRequest):
     try:
-        # Invoke agent with query
-        agent_response = ask(query.query_text)
+        # Check if this is a new session (start) or existing (answer)
+        try:
+            interaction = await get_interaction(request.session_id)
+            is_new = False
+        except HTTPException:
+            is_new = True
 
-        # Generate follow-up questions
-        question = run_campaign(query.query_text)
-        questions = [question] if isinstance(question, str) else question
+        if is_new:
+            # Create new interaction
+            interaction_data = {
+                "campaign_id": request.campaign_id,
+                "user_id": request.user_id,
+                "session_id": request.session_id,
+                "answers": [],
+                "questions": [],
+                "question_count": 0,
+                "survey_ended": False,
+            }
+            await create_interaction(interaction_data)
+            question = ask("/start")
+            await update_interaction(
+                request.session_id,
+                {
+                    "questions": [question],
+                    "question_count": 1,
+                },
+            )
+            return SurveyResponse(question=question, question_count=1, survey_ended=False)
 
-        # Get existing interactions and append new questions
-        existing_interactions = await list_interactions(query.campaign_id)
-        all_questions = []
-        for interaction in existing_interactions:
-            all_questions.extend(interaction.get("questions_generated", []))
-        all_questions.extend(questions)
-        question_count = len(all_questions)
+        # Handle answer
+        answers = interaction.get("answers", [])
+        answers.append(request.answer)
+        questions = interaction.get("questions", [])
+        question_count = len(questions)
 
-        # Check if question limit reached
-        survey_complete = check_question_limit(campaign_id=query.campaign_id, question_count=question_count)
+        # Check if limit reached
+        survey_ended = await check_question_limit(request.campaign_id, question_count)
 
-        # Store interaction data
-        interaction_data = {
-            "campaign_id": query.campaign_id,
-            "user_id": query.user_id,
-            "session_id": query.session_id,
-            "query": query.query_text,
-            "response": agent_response,
-            "questions_generated": questions,
-            "survey_ended": survey_complete,
-        }
-        await create_interaction(interaction_data)
+        if survey_ended:
+            await update_interaction(request.session_id, {"answers": answers, "survey_ended": True})
+            await end_survey(request.session_id)
+            return SurveyResponse(question="", question_count=question_count, survey_ended=True)
 
-        if survey_complete:
-            await end_survey(query.session_id)
+        # Ask next question
+        question = ask(request.answer)
+        questions.append(question)
+        question_count += 1
 
-        return QueryResponse(
-            agent_response=agent_response,
-            questions_generated=questions,
-            question_count=question_count,
-            survey_ended=survey_complete,
+        await update_interaction(
+            request.session_id,
+            {
+                "answers": answers,
+                "questions": questions,
+                "question_count": question_count,
+            },
         )
+
+        return SurveyResponse(question=question, question_count=question_count, survey_ended=False)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-# @router.get("/survey/{session_id}")
-# async def get_survey_status(session_id: str):
-#     try:
-#         is_complete = check_question_limit(session_id)
-#         return {"survey_complete": is_complete}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))

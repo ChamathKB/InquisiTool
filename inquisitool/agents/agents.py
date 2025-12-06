@@ -95,7 +95,7 @@ campaign_crew = Crew(
 )
 
 
-def ask(query: str) -> str:
+def ask(query: str | None) -> str:
     return crew.kickoff(inputs={"query": query})
 
 
