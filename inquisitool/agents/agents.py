@@ -43,6 +43,17 @@ campaign_manager = Agent(
     verbose=True,
 )
 
+question_generator = Agent(
+    role="Campaign Question Generator",
+    goal="Generate targeted survey questions for campaigns",
+    backstory="""You are an expert survey designer who creates effective
+    questions based on campaign objectives, target audience, and adapts
+    follow-up questions based on previous user responses.""",
+    tools=[qdrant_tool],
+    llm=llm,
+    verbose=True,
+)
+
 survey_executor = Agent(
     role="Survey Execution Specialist",
     goal="Execute survey campaigns and collect responses",
@@ -74,6 +85,12 @@ campaign_analysis_task = Task(
     agent=campaign_manager,
 )
 
+question_generation_task = Task(
+    description="""Generate survey questions for campaign {campaign_id} based on
+    campaign objectives, target audience, research context, and previous responses: {responses}.""",
+    agent=question_generator,
+)
+
 survey_execution_task = Task(
     description="""Execute survey campaign {campaign_id} by coordinating
     question delivery and response collection.""",
@@ -88,8 +105,8 @@ crew = Crew(
 )
 
 campaign_crew = Crew(
-    agents=[campaign_manager, survey_executor],
-    tasks=[campaign_analysis_task, survey_execution_task],
+    agents=[campaign_manager, question_generator, survey_executor],
+    tasks=[campaign_analysis_task, question_generation_task, survey_execution_task],
     process=Process.sequential,
     verbose=True,
 )
@@ -97,6 +114,16 @@ campaign_crew = Crew(
 
 def ask(query: str | None) -> str:
     return crew.kickoff(inputs={"query": query})
+
+
+def generate_question(campaign_id: str, responses: list = []) -> str:
+    question_crew = Crew(
+        agents=[question_generator],
+        tasks=[question_generation_task],
+        process=Process.sequential,
+        verbose=True,
+    )
+    return question_crew.kickoff(inputs={"campaign_id": campaign_id, "responses": responses or []})
 
 
 def run_campaign(campaign_id: str) -> str:

@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from inquisitool.agents.agents import ask
+from inquisitool.agents.agents import ask, generate_question
 from inquisitool.db.mongodb import (
     create_interaction,
     get_interaction,
@@ -73,8 +73,8 @@ async def process_survey(request: SurveyRequest):
             await end_survey(request.session_id)
             return SurveyResponse(question="", question_count=question_count, survey_ended=True)
 
-        # Ask next question
-        question = ask(request.answer)
+        # Ask next question using previous responses
+        question = generate_question(request.campaign_id, answers)
         questions.append(question)
         question_count += 1
 
