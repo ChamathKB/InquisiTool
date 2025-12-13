@@ -13,25 +13,25 @@ llm = LLM(
     temperature=0.7,
 )
 
-search_agent = Agent(
-    role="Senior Semantic Search Agent",
-    goal="Find and analyze documents based on semantic search",
-    backstory="""You are an expert research assistant who can find relevant
-    information using semantic search in a Qdrant database.""",
-    tools=[qdrant_tool],
-    llm=llm,
-    verbose=True,
-)
+# search_agent = Agent(
+#     role="Senior Semantic Search Agent",
+#     goal="Find and analyze documents based on semantic search",
+#     backstory="""You are an expert research assistant who can find relevant
+#     information using semantic search in a Qdrant database.""",
+#     tools=[qdrant_tool],
+#     llm=llm,
+#     verbose=True,
+# )
 
-answer_agent = Agent(
-    role="Senior Answer Assistant",
-    goal="Generate answers to questions based on the context provided",
-    backstory="""You are an expert answer assistant who can generate
-    answers to questions based on the context provided.""",
-    tools=[qdrant_tool],
-    llm=llm,
-    verbose=True,
-)
+# answer_agent = Agent(
+#     role="Senior Answer Assistant",
+#     goal="Generate answers to questions based on the context provided",
+#     backstory="""You are an expert answer assistant who can generate
+#     answers to questions based on the context provided.""",
+#     tools=[qdrant_tool],
+#     llm=llm,
+#     verbose=True,
+# )
 
 campaign_manager = Agent(
     role="Survey Campaign Manager",
@@ -64,20 +64,20 @@ survey_executor = Agent(
     verbose=True,
 )
 
-search_task = Task(
-    description="""Search for relevant documents about the {query}.
-    Your final answer should include:
-    - The relevant information found
-    - The similarity scores of the results
-    - The metadata of the relevant documents""",
-    agent=search_agent,
-)
+# search_task = Task(
+#     description="""Search for relevant documents about the {query}.
+#     Your final answer should include:
+#     - The relevant information found
+#     - The similarity scores of the results
+#     - The metadata of the relevant documents""",
+#     agent=search_agent,
+# )
 
-answer_task = Task(
-    description="""Given the context and metadata of relevant documents,
-    generate a final answer based on the context.""",
-    agent=answer_agent,
-)
+# answer_task = Task(
+#     description="""Given the context and metadata of relevant documents,
+#     generate a final answer based on the context.""",
+#     agent=answer_agent,
+# )
 
 campaign_analysis_task = Task(
     description="""Analyze campaign {campaign_id} requirements and validate
@@ -97,34 +97,34 @@ survey_execution_task = Task(
     agent=survey_executor,
 )
 
-crew = Crew(
-    agents=[search_agent, answer_agent],
-    tasks=[search_task, answer_task],
-    process=Process.sequential,
-    verbose=True,
-)
+# crew = Crew(
+#     agents=[search_agent, answer_agent],
+#     tasks=[search_task, answer_task],
+#     process=Process.sequential,
+#     verbose=True,
+# )
 
-campaign_crew = Crew(
-    agents=[campaign_manager, question_generator, survey_executor],
-    tasks=[campaign_analysis_task, question_generation_task, survey_execution_task],
-    process=Process.sequential,
-    verbose=True,
-)
+# campaign_crew = Crew(
+#     agents=[campaign_manager, question_generator, survey_executor],
+#     tasks=[campaign_analysis_task, question_generation_task, survey_execution_task],
+#     process=Process.sequential,
+#     verbose=True,
+# )
 
 
-def ask(query: str | None) -> str:
-    return crew.kickoff(inputs={"query": query})
+# def ask(query: str | None) -> str:
+#     return crew.kickoff(inputs={"query": query})
 
 
 def generate_question(campaign_id: str, responses: list = []) -> str:
     question_crew = Crew(
-        agents=[question_generator],
-        tasks=[question_generation_task],
+        agents=[campaign_manager, question_generator, survey_executor],
+        tasks=[campaign_analysis_task, question_generation_task, survey_execution_task],
         process=Process.sequential,
         verbose=True,
     )
     return question_crew.kickoff(inputs={"campaign_id": campaign_id, "responses": responses or []})
 
 
-def run_campaign(campaign_id: str) -> str:
-    return campaign_crew.kickoff(inputs={"campaign_id": campaign_id})
+# def run_campaign(campaign_id: str) -> str:
+#     return campaign_crew.kickoff(inputs={"campaign_id": campaign_id})
