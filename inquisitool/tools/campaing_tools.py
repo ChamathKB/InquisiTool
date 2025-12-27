@@ -34,6 +34,6 @@ def create_counter_task(campaign_id: str) -> Task:
 
     return Task(
         description=f"Count total questions for campaign {campaign_id}",
-        tool=counter_tool,
+        tools=counter_tool,
         expected_output="Dictionary with campaign ID and total question count",
     )
