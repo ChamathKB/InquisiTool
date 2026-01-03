@@ -73,7 +73,7 @@ def load_pdf_to_qdrant(pdf_path: str, qdrant: QdrantClient, collection_name: str
         qdrant.upsert(collection_name=collection_name, points=points)
 
 
-def qdrant_tool(pdf_path: str, qdrant: QdrantClient, collection_name: str) -> QdrantVectorSearchTool:
+def qdrant_tool(collection_name: str) -> QdrantVectorSearchTool:
 
     qdrant_tool = QdrantVectorSearchTool(collection_name=collection_name, limit=3, score_threshold=0.35)
     return qdrant_tool

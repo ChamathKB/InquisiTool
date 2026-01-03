@@ -1,11 +1,10 @@
 from crewai import LLM, Agent, Crew, Process, Task
-from qdrant_client import QdrantClient
 
 from inquisitool.constants import LLM_MODEL
 from inquisitool.tools.campaing_tools import QuestionCounterTool
 from inquisitool.tools.vector_search import qdrant_tool
 
-qdrant_tool = qdrant_tool(pdf_path="inquisitool.pdf", qdrant=QdrantClient, collection_name="inquisitool")
+qdrant_tool = qdrant_tool(collection_name="inquisitool")
 question_counter_tool = QuestionCounterTool()
 
 llm = LLM(
