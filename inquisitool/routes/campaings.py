@@ -24,6 +24,7 @@ class Campaign(BaseModel):
     status: str
     target_audience: str
     number_of_questions: int
+    collection_id: str  # Assigned knowledge base collection
     created_at: datetime
     updated_at: datetime
 

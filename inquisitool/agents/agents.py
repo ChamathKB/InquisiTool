@@ -1,6 +1,7 @@
 from crewai import LLM, Agent, Crew, Process, Task
 
 from inquisitool.constants import LLM_MODEL
+from inquisitool.db.mongodb import get_campaign
 from inquisitool.tools.campaing_tools import QuestionCounterTool
 from inquisitool.tools.vector_search import qdrant_tool
 
@@ -32,14 +33,14 @@ llm = LLM(
 # )
 
 
-def create_question_generator(campaign_collection: str) -> Agent:
+def create_question_generator(collection_id: str) -> Agent:
     return Agent(
         role="Campaign Question Generator",
         goal="Generate targeted survey questions for campaigns",
         backstory="""You are an expert survey designer who creates effective
         questions based on campaign objectives, target audience, and adapts
         follow-up questions based on previous user responses.""",
-        tools=[qdrant_tool(collection_name=campaign_collection)],
+        tools=[qdrant_tool(collection_name=collection_id)],
         llm=llm,
         verbose=True,
     )
@@ -122,8 +123,11 @@ survey_execution_task = Task(
 #     return crew.kickoff(inputs={"query": query})
 
 
-def generate_question(campaign_id: str, responses: list = []) -> str:
-    question_generator = create_question_generator(campaign_id)
+async def generate_question(campaign_id: str, responses: list = []) -> str:
+    campaign = await get_campaign(campaign_id)
+    collection_id = campaign.get("collection_id")
+
+    question_generator = create_question_generator(str(collection_id))
     question_generation_task = create_question_generation_task(campaign_id, question_generator, responses)
 
     question_crew = Crew(
