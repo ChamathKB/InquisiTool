@@ -87,6 +87,7 @@ def create_question_generation_task(campaign_id: str, question_generator: Agent,
     return Task(
         description="""Generate survey questions for campaign {campaign_id} based on
         campaign objectives, target audience, research context, and previous responses: {responses}.""",
+        expected_output="A list of survey questions tailored to the campaign and previous responses.",
         agent=question_generator,
     )
 
@@ -94,6 +95,7 @@ def create_question_generation_task(campaign_id: str, question_generator: Agent,
 campaign_analysis_task = Task(
     description="""Analyze campaign {campaign_id} requirements and validate
     campaign configuration including question count and target audience.""",
+    expected_output="Confirmation of campaign readiness and any recommendations for optimization.",
     agent=campaign_manager,
 )
 
@@ -101,6 +103,7 @@ campaign_analysis_task = Task(
 survey_execution_task = Task(
     description="""Execute survey campaign {campaign_id} by coordinating
     question delivery and response collection.""",
+    expected_output="Successful execution of the survey campaign with collected responses.",
     agent=survey_executor,
 )
 
