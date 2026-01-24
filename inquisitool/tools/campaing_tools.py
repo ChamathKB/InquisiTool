@@ -1,39 +1,27 @@
-from crewai import Task
+from typing import Type
+
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 
 from inquisitool.db.mongodb import get_campaign
 
 
-class QuestionCounterTool:
-    def __init__(self):
-        """Initialize the QuestionCounter tool"""
-        pass
+class QuestionCounterInput(BaseModel):
+    """Input schema for QuestionCounterTool."""
 
-    async def count_campaign_questions(self, campaign_id: str) -> int:
-        """
-        Count number of questions for a specific campaign
-        """
+    campaign_id: str = Field(..., description="The campaign ID to count questions for")
+
+
+class QuestionCounterTool(BaseTool):
+    name: str = "question_counter"
+    description: str = "Count the number of questions for a specific campaign"
+    args_schema: Type[BaseModel] = QuestionCounterInput
+
+    async def _run(self, campaign_id: str) -> dict:
+        """Count number of questions for a specific campaign"""
         try:
             campaign = await get_campaign(campaign_id)
-            return campaign.get("number_of_questions", 0)
+            question_count = campaign.get("number_of_questions", 0)
+            return {"campaign_id": campaign_id, "total_questions": question_count}
         except Exception as e:
-            print(f"Database error: {e}")
-            return 0
-
-    async def execute(self, campaign_id: str) -> dict:
-        """
-        Execute the question counting task
-        """
-        question_count = await self.count_campaign_questions(campaign_id)
-
-        return {"campaign_id": campaign_id, "total_questions": question_count}
-
-
-# Example Task using the tool
-def create_counter_task(campaign_id: str) -> Task:
-    counter_tool = QuestionCounterTool()
-
-    return Task(
-        description=f"Count total questions for campaign {campaign_id}",
-        tools=counter_tool,
-        expected_output="Dictionary with campaign ID and total question count",
-    )
+            return {"error": f"Database error: {e}", "campaign_id": campaign_id, "total_questions": 0}
