@@ -2,14 +2,15 @@ from datetime import datetime
 from typing import List
 from uuid import UUID
 
-from db.mongodb import (
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+from inquisitool.db.mongodb import (
     create_campaign,
     delete_campaign,
     list_campaigns,
     update_campaign,
 )
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -44,7 +45,7 @@ async def get_campaigns():
 
 # Get campaign by ID
 @app.get("/campaigns/{campaign_id}", response_model=Campaign)
-async def get_campaign(campaign_id: UUID):
+async def get_campaign(campaign_id: str):
     campaigns = await list_campaigns()
     for campaign in campaigns:
         if campaign.campaign_id == campaign_id:
@@ -54,7 +55,7 @@ async def get_campaign(campaign_id: UUID):
 
 # Update campaign
 @app.put("/campaigns/{campaign_id}", response_model=Campaign)
-async def update_campaign_endpoint(campaign_id: UUID, updated_campaign: Campaign):
+async def update_campaign_endpoint(campaign_id: str, updated_campaign: Campaign):
     result = await update_campaign(campaign_id, updated_campaign)
     if result:
         return updated_campaign
@@ -63,7 +64,7 @@ async def update_campaign_endpoint(campaign_id: UUID, updated_campaign: Campaign
 
 # Delete campaign
 @app.delete("/campaigns/{campaign_id}")
-async def delete_campaign_endpoint(campaign_id: UUID):
+async def delete_campaign_endpoint(campaign_id: str):
     result = await delete_campaign(campaign_id)
     if result:
         return {"message": "Campaign deleted successfully"}
