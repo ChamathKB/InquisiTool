@@ -1,17 +1,20 @@
 import os
 
-from fastapi import FastAPI, APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
-from inquisitool.db.mongodb import create_documents_collection, get_mongodb, upload_document, delete_documents_collection
-
+from inquisitool.db.mongodb import (
+    create_documents_collection,
+    delete_documents_collection,
+    upload_document,
+)
 
 router = APIRouter()
 
 UPLOAD_DIR = "upload"
 
 
-@router.post("/create_collection")
-def create_collection(app: FastAPI, collection_name: str) -> dict:
+@router.post("/create_collection", response_model=dict)
+async def create_collection(request: Request, collection_name: str) -> dict:
     """
     Creates a new Qdrant collection.
 
@@ -22,13 +25,13 @@ def create_collection(app: FastAPI, collection_name: str) -> dict:
         dict: A dictionary containing a success message.
     """
 
-    result = create_documents_collection(app.state.qdrant, collection_name)
+    result = await create_documents_collection(request.app.state.qdrant, collection_name)
     return {"message": f"{collection_name} collection created successfully with collection id {result['inserted_id']}!"}
 
 
-@router.post("/upload_docs")
+@router.post("/upload_docs", response_model=dict)
 async def upload_docs(
-    app: FastAPI,
+    request: Request,
     file: UploadFile = File(...),
     collection_id: str = Form(...),
     chunk_size: int = Form(1000),
@@ -49,7 +52,7 @@ async def upload_docs(
 
     filename = file.filename
     content = await file.read()
-    qdrant = app.state.qdrant
+    qdrant = request.app.state.qdrant
 
     # Save the uploaded file temporarily
     os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -59,7 +62,7 @@ async def upload_docs(
         with open(file_path, "wb") as buffer:
             buffer.write(content)
 
-        upload_document(file_path, qdrant, collection_id)
+        await upload_document(file_path, qdrant, collection_id)
 
         os.remove(file_path)
         return {"message": "Embeddings uploaded successfully!"}
@@ -70,8 +73,8 @@ async def upload_docs(
         raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
 
 
-@router.delete("/delete_collection")
-async def collection_delete(app: FastAPI, collection_id: str) -> dict:
+@router.delete("/delete_collection", response_model=dict)
+async def collection_delete(request: Request, collection_id: str) -> dict:
     """
     Deletes a Qdrant collection and its associated documents.
 
@@ -87,7 +90,7 @@ async def collection_delete(app: FastAPI, collection_id: str) -> dict:
     """
 
     try:
-        result = delete_documents_collection(app.state.qdrant, collection_id)
+        result = await delete_documents_collection(request.app.state.qdrant, collection_id)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Document deletion failed: {str(e)}")

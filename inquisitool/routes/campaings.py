@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from inquisitool.db.mongodb import (
@@ -12,7 +12,7 @@ from inquisitool.db.mongodb import (
     update_campaign,
 )
 
-app = FastAPI()
+router = APIRouter()
 
 
 # Pydantic model for Campaign
@@ -31,20 +31,20 @@ class Campaign(BaseModel):
 
 
 # Create campaign
-@app.post("/campaigns/", response_model=Campaign)
+@router.post("/campaigns/", response_model=Campaign)
 async def create_campaign_endpoint(campaign: Campaign):
     result = await create_campaign(campaign)
     return result
 
 
 # Get all campaigns
-@app.get("/campaigns/", response_model=List[Campaign])
+@router.get("/campaigns/", response_model=List[Campaign])
 async def get_campaigns():
     return await list_campaigns()
 
 
 # Get campaign by ID
-@app.get("/campaigns/{campaign_id}", response_model=Campaign)
+@router.get("/campaigns/{campaign_id}", response_model=Campaign)
 async def get_campaign(campaign_id: str):
     campaigns = await list_campaigns()
     for campaign in campaigns:
@@ -54,7 +54,7 @@ async def get_campaign(campaign_id: str):
 
 
 # Update campaign
-@app.put("/campaigns/{campaign_id}", response_model=Campaign)
+@router.put("/campaigns/{campaign_id}", response_model=Campaign)
 async def update_campaign_endpoint(campaign_id: str, updated_campaign: Campaign):
     result = await update_campaign(campaign_id, updated_campaign)
     if result:
@@ -63,7 +63,7 @@ async def update_campaign_endpoint(campaign_id: str, updated_campaign: Campaign)
 
 
 # Delete campaign
-@app.delete("/campaigns/{campaign_id}")
+@router.delete("/campaigns/{campaign_id}")
 async def delete_campaign_endpoint(campaign_id: str):
     result = await delete_campaign(campaign_id)
     if result:
