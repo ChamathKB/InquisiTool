@@ -70,9 +70,7 @@ def run(host: str, port: int, log_level: str) -> None:
             app,
             host=host,
             port=port,
-            reload=True,
             log_level=log_level,
-            factory=True,
         )
     except ValidationError as e:
         logger.error(f"❌️ Configuration error: {e}")
