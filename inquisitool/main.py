@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from qdrant_client import QdrantClient
 
 from inquisitool.constants import LOG_LEVELS, QDRANT_URL, REDIS_URL
-from inquisitool.db import mongodb
+from inquisitool.db.mongodb import mongodb
 from inquisitool.routes import campaings, knowledgebases, query
 
 
