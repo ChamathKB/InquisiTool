@@ -1,3 +1,5 @@
+import logging
+
 from inquisitool.db.mongodb import get_campaign, update_interaction
 
 
@@ -9,7 +11,7 @@ async def check_question_limit(campaign_id: str, question_count: int) -> bool:
         campaign = await get_campaign(campaign_id)
         return question_count >= campaign.get("number_of_questions", 0)
     except Exception as e:
-        print(f"Database error: {e}")
+        logging.error(f"Error checking question limit: {e}")
         return False
 
 
