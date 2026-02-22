@@ -22,6 +22,9 @@ dependencies = [
     "python-dotenv (>=1.0.0,<2.0.0)"
 ]
 
+[project.scripts]
+inquisitool = "inquisitool.main:inquisi"
+
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
