@@ -2,9 +2,6 @@
 
 AI-powered survey application that generates dynamic, context-aware survey questions using CrewAI agents and semantic search over knowledge bases.
 
-
-
-
 ## Features
 
 - Dynamic question generation based on campaign objectives and user responses
@@ -34,36 +31,40 @@ AI-powered survey application that generates dynamic, context-aware survey quest
 
 1. Clone the repository
 2. Install dependencies:
-```bash
-pip install -e .
-```
+
+    ```bash
+    pip install -e .
+    ```
 
 3. Create `.env` file:
-```env
-GEMINI_API_KEY=your_api_key
-LLM_MODEL=gemini-2.5-flash-preview-05-20
-EMBEDDING_MODEL=gemini-embedding-exp-03-07
-MONGO_URL=mongodb://localhost:27017
-QDRANT_URL=http://localhost:6333
-REDIS_URL=redis://localhost:6379
-```
+
+    ```env
+    GEMINI_API_KEY=your_api_key
+    LLM_MODEL=gemini-2.5-flash-preview-05-20
+    EMBEDDING_MODEL=gemini-embedding-exp-03-07
+    MONGO_URL=mongodb://localhost:27017
+    QDRANT_URL=http://localhost:6333
+    REDIS_URL=redis://localhost:6379
+    ```
 
 4. Start services:
-```bash
-# MongoDB
-mongod
 
-# Qdrant
-docker run -p 6333:6333 qdrant/qdrant
+    ```bash
+    # MongoDB
+    mongod
 
-# Redis
-redis-server
-```
+    # Qdrant
+    docker run -p 6333:6333 qdrant/qdrant
+
+    # Redis
+    redis-server
+    ```
 
 5. Run the application:
-```bash
-inquisitool run --host 0.0.0.0 --port 8000
-```
+
+    ```bash
+    inquisitool run --host 0.0.0.0 --port 8000
+    ```
 
 ## Deployment
 
@@ -78,9 +79,10 @@ docker-compose up -d
 1. Set environment variables
 2. Ensure MongoDB, Qdrant, and Redis are accessible
 3. Run with production ASGI server:
-```bash
-gunicorn inquisitool.main:create_app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-```
+
+    ```bash
+    gunicorn inquisitool.main:create_app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+    ```
 
 ## API Endpoints
 
