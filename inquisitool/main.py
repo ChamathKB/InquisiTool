@@ -23,6 +23,7 @@ def create_app():
         logging.info("🟢️ Starting up resources...")
         app.state.redis_client = redis.from_url(REDIS_URL, decode_responses=True)
         app.state.mongodb = mongodb
+        await mongodb.connect()
         app.state.qdrant = QdrantClient(location=QDRANT_URL)
         app.state.session = aiohttp.ClientSession()
         yield
