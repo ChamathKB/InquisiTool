@@ -23,7 +23,6 @@ coverage.xml
 .vscode
 .idea
 
-README.md
 .gitignore
 .env
 docker-compose.yml
