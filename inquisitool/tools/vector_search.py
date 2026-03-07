@@ -2,12 +2,13 @@ import uuid
 
 import pdfplumber
 from crewai_tools import QdrantVectorSearchTool
+from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
 from google import genai
 from google.genai import types
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
 
-from inquisitool.constants import EMBEDDING_MODEL, GEMINI_API_KEY
+from inquisitool.constants import EMBEDDING_MODEL, GEMINI_API_KEY, QDRANT_URL
 
 embeddings = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -75,5 +76,13 @@ def load_pdf_to_qdrant(pdf_path: str, qdrant: QdrantClient, collection_name: str
 
 def qdrant_tool(collection_name: str) -> QdrantVectorSearchTool:
 
-    qdrant_tool = QdrantVectorSearchTool(collection_name=collection_name, limit=3, score_threshold=0.35)
+    qdrant_tool = QdrantVectorSearchTool(
+        qdrant_config=QdrantConfig(
+            qdrant_url=QDRANT_URL,
+            # qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+            collection_name=collection_name,
+            limit=3,
+            score_threshold=0.35,
+        )
+    )
     return qdrant_tool
