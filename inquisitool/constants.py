@@ -19,6 +19,8 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "upload")
+
 LOG_LEVELS = {
     "debug": logging.DEBUG,
     "info": logging.INFO,

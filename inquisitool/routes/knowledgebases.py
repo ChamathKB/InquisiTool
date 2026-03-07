@@ -2,6 +2,7 @@ import os
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
+from inquisitool.constants import UPLOAD_DIR
 from inquisitool.db.mongodb import (
     create_documents_collection,
     delete_documents_collection,
@@ -9,8 +10,6 @@ from inquisitool.db.mongodb import (
 )
 
 router = APIRouter()
-
-UPLOAD_DIR = "upload"
 
 
 @router.post("/create_collection", response_model=dict)
