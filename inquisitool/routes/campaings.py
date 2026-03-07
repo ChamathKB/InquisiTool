@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from inquisitool.db.mongodb import (
     create_campaign,
     delete_campaign,
+    get_campaign,
     list_campaigns,
     update_campaign,
 )
@@ -17,6 +18,18 @@ router = APIRouter()
 
 # Pydantic model for Campaign
 class Campaign(BaseModel):
+    campaign_name: str
+    campaign_description: str
+    start_date: datetime
+    end_date: datetime
+    status: str
+    target_audience: str
+    number_of_questions: int
+    collection_id: str  # Assigned knowledge base collection
+
+
+# Pydantic model for Campaign Response
+class CampaignResponse(BaseModel):
     campaign_id: UUID
     campaign_name: str
     campaign_description: str
@@ -31,35 +44,39 @@ class Campaign(BaseModel):
 
 
 # Create campaign
-@router.post("/campaigns/", response_model=Campaign)
+@router.post("/campaigns/", response_model=CampaignResponse)
 async def create_campaign_endpoint(campaign: Campaign):
-    result = await create_campaign(campaign)
-    return result
+    result = await create_campaign(campaign.model_dump())
+    return await get_campaign(result["campaign_id"])
 
 
 # Get all campaigns
-@router.get("/campaigns/", response_model=List[Campaign])
+@router.get("/campaigns/", response_model=List[CampaignResponse])
 async def get_campaigns():
-    return await list_campaigns()
+    try:
+        result = await list_campaigns()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Campaign listing failed: {e}")
 
 
 # Get campaign by ID
-@router.get("/campaigns/{campaign_id}", response_model=Campaign)
-async def get_campaign(campaign_id: str):
-    campaigns = await list_campaigns()
-    for campaign in campaigns:
-        if campaign.campaign_id == campaign_id:
-            return campaign
-    raise HTTPException(status_code=404, detail="Campaign not found")
+@router.get("/campaigns/{campaign_id}", response_model=CampaignResponse)
+async def get_campaign_endpoint(campaign_id: str):
+    try:
+        return await get_campaign(campaign_id)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Campaign not found: {e}")
 
 
 # Update campaign
-@router.put("/campaigns/{campaign_id}", response_model=Campaign)
+@router.put("/campaigns/{campaign_id}", response_model=CampaignResponse)
 async def update_campaign_endpoint(campaign_id: str, updated_campaign: Campaign):
-    result = await update_campaign(campaign_id, updated_campaign)
-    if result:
-        return updated_campaign
-    raise HTTPException(status_code=404, detail="Campaign not found")
+    try:
+        await update_campaign(campaign_id, updated_campaign.model_dump())
+        return await get_campaign(campaign_id)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Campaign not found: {e}")
 
 
 # Delete campaign

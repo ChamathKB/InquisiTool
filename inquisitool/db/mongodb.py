@@ -103,9 +103,10 @@ async def create_campaign(campaign_data: dict) -> dict:
     try:
         db = await get_mongodb()
         campaign_data["created_at"] = datetime.utcnow()
+        campaign_data["updated_at"] = datetime.utcnow()
         campaign_data["campaign_id"] = str(uuid.uuid4())
-        result = await db["campaigns"].insert_one(campaign_data)
-        return {"inserted_id": result.inserted_id}
+        await db["campaigns"].insert_one(campaign_data)
+        return {"campaign_id": campaign_data["campaign_id"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Campaign creation failed: {str(e)}")
 
@@ -116,6 +117,7 @@ async def get_campaign(campaign_id: str) -> dict:
         campaign = await db["campaigns"].find_one({"campaign_id": campaign_id})
         if campaign is None:
             raise HTTPException(status_code=404, detail="Campaign not found")
+        campaign["_id"] = str(campaign["_id"])
         return campaign
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Campaign retrieval failed: {str(e)}")
@@ -149,6 +151,8 @@ async def list_campaigns(skip: int = 0, limit: int = 10) -> list:
         db = await get_mongodb()
         cursor = db["campaigns"].find().skip(skip).limit(limit)
         campaigns = await cursor.to_list(length=limit)
+        for campaign in campaigns:
+            campaign["_id"] = str(campaign["_id"])
         return campaigns
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Campaign listing failed: {str(e)}")
