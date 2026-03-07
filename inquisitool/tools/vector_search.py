@@ -22,13 +22,13 @@ def get_embeddings(text: str) -> list[float]:
     """
     result = embeddings.models.embed_content(
         model=EMBEDDING_MODEL,
-        content=text,
+        contents=text,
         config=types.EmbedContentConfig(
             task_type="RETRIEVAL_DOCUMENT",
             output_dimensionality=1536,
         ),
     )
-    return result.embeddings
+    return result.embeddings[0].values
 
 
 def extract_text_from_pdf(pdf_path: str) -> list[str]:
