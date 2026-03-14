@@ -3,37 +3,32 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install poetry
-RUN pip install --no-cache-dir poetry==1.8.3
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
-COPY pyproject.toml poetry.lock* ./
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY pyproject.toml README.md ./
 COPY inquisitool/ ./inquisitool/
 
-# Build wheel
-RUN poetry build -f wheel
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir . gunicorn
 
 # Runtime stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /app/inquisitool ./inquisitool
 
-# Copy wheel from builder
-COPY --from=builder /app/dist/*.whl /tmp/
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Install the wheel
-RUN pip install --no-cache-dir /tmp/*.whl && rm -rf /tmp/*.whl
-
-# Create upload directory
 RUN mkdir -p upload
 
-# Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["inquisitool", "run", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["gunicorn", "inquisitool.main:create_app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
