@@ -3,39 +3,32 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install poetry
-RUN pip install --no-cache-dir poetry==2.2.1
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
-COPY pyproject.toml poetry.lock* ./
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Export dependencies to requirements.txt
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+COPY pyproject.toml README.md ./
+COPY inquisitool/ ./inquisitool/
+
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir .
 
 # Runtime stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /app/inquisitool ./inquisitool
 
-# Copy requirements from builder
-COPY --from=builder /app/requirements.txt .
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
-COPY inquisitool/ ./inquisitool/
-
-# Create upload directory
 RUN mkdir -p upload
 
-# Expose port
 EXPOSE 8000
 
-# Run the application
 CMD ["python", "-m", "inquisitool.main", "run", "--host", "0.0.0.0", "--port", "8000"]
