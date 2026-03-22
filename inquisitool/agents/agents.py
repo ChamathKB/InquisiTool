@@ -1,15 +1,17 @@
 from crewai import LLM, Agent, Crew, Process, Task
 
-from inquisitool.constants import LLM_MODEL
+from inquisitool.constants import GEMINI_API_KEY, LLM_MODEL
 from inquisitool.db.mongodb import get_campaign
 from inquisitool.tools.campaing_tools import QuestionCounterTool
-from inquisitool.tools.vector_search import qdrant_tool
+from inquisitool.tools.vector_search import QdrantSearchTool
 
 question_counter_tool = QuestionCounterTool()
+qdrant_tool = QdrantSearchTool()
 
 llm = LLM(
     model=f"gemini/{LLM_MODEL}",
     temperature=0.7,
+    api_key=GEMINI_API_KEY,
 )
 
 # search_agent = Agent(
@@ -33,17 +35,29 @@ llm = LLM(
 # )
 
 
-def create_question_generator(collection_id: str) -> Agent:
-    return Agent(
-        role="Campaign Question Generator",
-        goal="Generate targeted survey questions for campaigns",
-        backstory="""You are an expert survey designer who creates effective
+# def create_question_generator(collection_id: str) -> Agent:
+#     return Agent(
+#         role="Campaign Question Generator",
+#         goal="Generate targeted survey questions for campaigns",
+#         backstory="""You are an expert survey designer who creates effective
+#         questions based on campaign objectives, target audience, and adapts
+#         follow-up questions based on previous user responses.""",
+#         tools=[qdrant_tool(collection_name=collection_id)],
+#         llm=llm,
+#         verbose=True,
+#     )
+
+
+question_generator = Agent(
+    role="Campaign Question Generator",
+    goal="Generate targeted survey questions for campaigns",
+    backstory="""You are an expert survey designer who creates effective
         questions based on campaign objectives, target audience, and adapts
         follow-up questions based on previous user responses.""",
-        tools=[qdrant_tool(collection_name=collection_id)],
-        llm=llm,
-        verbose=True,
-    )
+    tools=[qdrant_tool],
+    llm=llm,
+    verbose=True,
+)
 
 
 campaign_manager = Agent(
@@ -83,14 +97,20 @@ survey_executor = Agent(
 # )
 
 
-def create_question_generation_task(campaign_id: str, question_generator: Agent, responses: list = []) -> Task:
-    return Task(
-        description="""Generate survey questions for campaign {campaign_id} based on
-        campaign objectives, target audience, research context, and previous responses: {responses}.""",
-        expected_output="A list of survey questions tailored to the campaign and previous responses.",
-        agent=question_generator,
-    )
+# def create_question_generation_task(campaign_id: str, question_generator: Agent, responses: list = []) -> Task:
+#     return Task(
+#         description="""Generate survey questions for campaign {campaign_id} based on
+#         campaign objectives, target audience, research context, and previous responses: {responses}.""",
+#         expected_output="A list of survey questions tailored to the campaign and previous responses.",
+#         agent=question_generator,
+#     )
 
+question_generation_task = Task(
+    description="""Generate survey questions for campaign {campaign_id} based on
+        campaign objectives, target audience, research context, and previous responses: {responses}.""",
+    expected_output="A list of survey questions tailored to the campaign and previous responses.",
+    agent=question_generator,
+)
 
 campaign_analysis_task = Task(
     description="""Analyze campaign {campaign_id} requirements and validate
@@ -130,8 +150,8 @@ async def generate_question(campaign_id: str, responses: list = []) -> str:
     campaign = await get_campaign(campaign_id)
     collection_id = campaign.get("collection_id")
 
-    question_generator = create_question_generator(str(collection_id))
-    question_generation_task = create_question_generation_task(campaign_id, question_generator, responses)
+    # question_generator = create_question_generator(str(collection_id))
+    # question_generation_task = create_question_generation_task(campaign_id, question_generator, responses)
 
     question_crew = Crew(
         agents=[campaign_manager, question_generator, survey_executor],
@@ -140,7 +160,9 @@ async def generate_question(campaign_id: str, responses: list = []) -> str:
         verbose=True,
     )
 
-    return question_crew.kickoff(inputs={"campaign_id": campaign_id, "responses": responses or []})
+    return question_crew.kickoff(
+        inputs={"campaign_id": campaign_id, "collection_id": collection_id, "responses": responses or []}
+    )
 
 
 # def run_campaign(campaign_id: str) -> str:

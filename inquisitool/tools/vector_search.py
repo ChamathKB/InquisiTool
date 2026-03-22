@@ -1,10 +1,11 @@
 import uuid
+from typing import Type
 
 import pdfplumber
-from crewai_tools import QdrantVectorSearchTool
-from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import QdrantConfig
+from crewai.tools import BaseTool
 from google import genai
 from google.genai import types
+from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
 
@@ -74,15 +75,40 @@ def load_pdf_to_qdrant(pdf_path: str, qdrant: QdrantClient, collection_name: str
         qdrant.upsert(collection_name=collection_name, points=points)
 
 
-def qdrant_tool(collection_name: str) -> QdrantVectorSearchTool:
+class QdrantSearchInput(BaseModel):
+    """Input schema for QdrantSearchTool."""
 
-    qdrant_tool = QdrantVectorSearchTool(
-        qdrant_config=QdrantConfig(
-            qdrant_url=QDRANT_URL,
-            # qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-            collection_name=collection_name,
-            limit=3,
-            score_threshold=0.35,
-        )
-    )
-    return qdrant_tool
+    query: str = Field(..., description="The search query to find relevant documents")
+    collection_name: str = Field(..., description="The name of the Qdrant collection to search in")
+
+
+class QdrantSearchTool(BaseTool):
+    name: str = "qdrant_search"
+    description: str = "Search for relevant documents in the knowledge base using semantic search"
+    args_schema: Type[BaseModel] = QdrantSearchInput
+    # collection_name: str
+
+    def _run(self, query: str, collection_name: str) -> str:
+        """Search Qdrant collection for relevant documents"""
+        try:
+            qdrant = QdrantClient(url=QDRANT_URL)
+            query_vector = get_embeddings(query)
+            results = qdrant.search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                limit=3,
+                score_threshold=0.35,
+            )
+            if not results:
+                return "No relevant documents found."
+
+            output = []
+            for result in results:
+                output.append(f"Score: {result.score}\nContent: {result.payload.get('text', '')}")
+            return "\n\n".join(output)
+        except Exception as e:
+            return f"Search error: {str(e)}"
+
+
+def qdrant_tool(collection_name: str) -> QdrantSearchTool:
+    return QdrantSearchTool(collection_name=collection_name)
