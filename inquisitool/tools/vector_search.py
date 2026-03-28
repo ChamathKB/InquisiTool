@@ -93,9 +93,9 @@ class QdrantSearchTool(BaseTool):
         try:
             qdrant = QdrantClient(url=QDRANT_URL)
             query_vector = get_embeddings(query)
-            results = qdrant.search(
+            results = qdrant.query_points(
                 collection_name=collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=3,
                 score_threshold=0.35,
             )
