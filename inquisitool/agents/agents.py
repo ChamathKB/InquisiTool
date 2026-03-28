@@ -2,10 +2,16 @@ from crewai import LLM, Agent, Crew, Process, Task
 
 from inquisitool.constants import GEMINI_API_KEY, LLM_MODEL
 from inquisitool.db.mongodb import get_campaign
-from inquisitool.tools.campaing_tools import QuestionCounterTool
+from inquisitool.tools.campaing_tools import (
+    CampaignDescriptionTool,
+    QuestionCounterTool,
+    TargetAudienceTool,
+)
 from inquisitool.tools.vector_search import QdrantSearchTool
 
 question_counter_tool = QuestionCounterTool()
+campaign_description_tool = CampaignDescriptionTool()
+target_audience_tool = TargetAudienceTool()
 qdrant_tool = QdrantSearchTool()
 
 llm = LLM(
@@ -54,7 +60,7 @@ question_generator = Agent(
     backstory="""You are an expert survey designer who creates effective
         questions based on campaign objectives, target audience, and adapts
         follow-up questions based on previous user responses.""",
-    tools=[qdrant_tool],
+    tools=[qdrant_tool, campaign_description_tool, target_audience_tool],
     llm=llm,
     verbose=True,
 )
@@ -65,7 +71,7 @@ campaign_manager = Agent(
     goal="Manage and execute survey campaigns",
     backstory="""You are an expert campaign manager who can analyze campaign
     requirements and coordinate survey execution.""",
-    tools=[question_counter_tool],
+    tools=[question_counter_tool, campaign_description_tool, target_audience_tool],
     llm=llm,
     verbose=True,
 )
@@ -76,7 +82,7 @@ survey_executor = Agent(
     goal="Execute survey campaigns and collect responses",
     backstory="""You are a survey execution specialist who can run campaigns
     and manage the survey process efficiently.""",
-    tools=[question_counter_tool],
+    tools=[question_counter_tool, campaign_description_tool, target_audience_tool],
     llm=llm,
     verbose=True,
 )
