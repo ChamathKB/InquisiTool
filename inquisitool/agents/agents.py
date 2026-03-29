@@ -26,6 +26,17 @@ class SurveyQuestion(BaseModel):
     question: str
 
 
+campaign_manager = Agent(
+    role="Survey Campaign Manager",
+    goal="Manage and execute survey campaigns",
+    backstory="""You are an expert campaign manager who can analyze campaign
+    requirements and coordinate survey execution.""",
+    tools=[question_counter_tool, campaign_description_tool, target_audience_tool],
+    llm=llm,
+    verbose=True,
+)
+
+
 question_generator = Agent(
     role="Campaign Question Generator",
     goal="Generate targeted survey questions for campaigns",
@@ -33,17 +44,6 @@ question_generator = Agent(
         questions based on campaign objectives, target audience, and adapts
         follow-up questions based on previous user responses.""",
     tools=[qdrant_tool],
-    llm=llm,
-    verbose=True,
-)
-
-
-campaign_manager = Agent(
-    role="Survey Campaign Manager",
-    goal="Manage and execute survey campaigns",
-    backstory="""You are an expert campaign manager who can analyze campaign
-    requirements and coordinate survey execution.""",
-    tools=[question_counter_tool, campaign_description_tool, target_audience_tool],
     llm=llm,
     verbose=True,
 )
@@ -60,19 +60,19 @@ survey_executor = Agent(
 )
 
 
-question_generation_task = Task(
-    description="""Generate survey questions for campaign {campaign_id} based on
-        campaign objectives, target audience, research context, and previous responses: {responses}.""",
-    expected_output="A list of survey questions tailored to the campaign and previous responses.",
-    agent=question_generator,
-)
-
-
 campaign_analysis_task = Task(
     description="""Analyze campaign {campaign_id} requirements and validate
     campaign configuration including question count and target audience.""",
     expected_output="Confirmation of campaign readiness and any recommendations for optimization.",
     agent=campaign_manager,
+)
+
+
+question_generation_task = Task(
+    description="""Generate survey questions for campaign {campaign_id} based on
+        campaign objectives, target audience, research context, and previous responses: {responses}.""",
+    expected_output="A list of survey questions tailored to the campaign and previous responses.",
+    agent=question_generator,
 )
 
 
