@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from inquisitool.constants import GEMINI_API_KEY, LLM_MODEL
 from inquisitool.db.mongodb import get_campaign
-from inquisitool.tools.campaing_tools import (
+from inquisitool.tools.campaign_tools import (
     CampaignDescriptionTool,
     QuestionCounterTool,
     TargetAudienceTool,
