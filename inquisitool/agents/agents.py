@@ -62,7 +62,7 @@ survey_executor = Agent(
 
 campaign_analysis_task = Task(
     description="""Analyze campaign {campaign_id} requirements and validate
-    campaign configuration including question count and target audience.""",
+    campaign configuration including question count (use session_id {session_id}) and target audience.""",
     expected_output="Confirmation of campaign readiness and any recommendations for optimization.",
     agent=campaign_manager,
 )
@@ -85,7 +85,7 @@ survey_execution_task = Task(
 )
 
 
-async def generate_question(campaign_id: str, responses: list = []) -> str:
+async def generate_question(campaign_id: str, session_id: str, responses: list = []) -> str:
     campaign = await get_campaign(campaign_id)
     collection_id = campaign.get("collection_id")
 
@@ -97,7 +97,12 @@ async def generate_question(campaign_id: str, responses: list = []) -> str:
     )
 
     crew_output = question_crew.kickoff(
-        inputs={"campaign_id": campaign_id, "collection_id": collection_id, "responses": responses or []}
+        inputs={
+            "campaign_id": campaign_id,
+            "session_id": session_id,
+            "collection_id": collection_id,
+            "responses": responses or [],
+        }
     )
 
     if crew_output.pydantic:

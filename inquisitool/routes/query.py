@@ -49,7 +49,9 @@ async def process_survey(request: SurveyRequest):
                 "survey_ended": False,
             }
             await create_interaction(interaction_data)
-            question = await generate_question(campaign_id=request.campaign_id, responses=["/start"])
+            question = await generate_question(
+                campaign_id=request.campaign_id, session_id=request.session_id, responses=["/start"]
+            )
             await update_interaction(
                 request.session_id,
                 {
@@ -74,7 +76,7 @@ async def process_survey(request: SurveyRequest):
             return SurveyResponse(question="", question_count=question_count, survey_ended=True)
 
         # Ask next question using previous responses
-        question = await generate_question(request.campaign_id, answers)
+        question = await generate_question(request.campaign_id, request.session_id, answers)
         questions.append(question)
         question_count += 1
 
