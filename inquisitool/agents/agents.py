@@ -49,21 +49,12 @@ question_generator = Agent(
 )
 
 
-survey_executor = Agent(
-    role="Survey Execution Specialist",
-    goal="Execute survey campaigns and collect responses",
-    backstory="""You are a survey execution specialist who can run campaigns
-    and manage the survey process efficiently.""",
-    tools=[question_counter_tool, campaign_description_tool, target_audience_tool],
-    llm=llm,
-    verbose=True,
-)
-
-
-campaign_analysis_task = Task(
-    description="""Analyze campaign {campaign_id} requirements and validate
-    campaign configuration including question count (use session_id {session_id}) and target audience.""",
-    expected_output="Confirmation of campaign readiness and any recommendations for optimization.",
+campaign_management_task = Task(
+    description="""Analyze and execute survey campaign {campaign_id}: validate campaign
+    configuration including question count (use session_id {session_id}) and target audience,
+    then return a single survey question based on the generated questions.""",
+    expected_output="A single survey question as a JSON object with a 'question' field.",
+    output_pydantic=SurveyQuestion,
     agent=campaign_manager,
 )
 
@@ -76,22 +67,13 @@ question_generation_task = Task(
 )
 
 
-survey_execution_task = Task(
-    description="""Execute survey campaign {campaign_id} by coordinating
-    question delivery and response collection. Return a single survey question.""",
-    expected_output="A single survey question as a JSON object with a 'question' field.",
-    output_pydantic=SurveyQuestion,
-    agent=survey_executor,
-)
-
-
 async def generate_question(campaign_id: str, session_id: str, responses: list = []) -> str:
     campaign = await get_campaign(campaign_id)
     collection_id = campaign.get("collection_id")
 
     question_crew = Crew(
-        agents=[campaign_manager, question_generator, survey_executor],
-        tasks=[campaign_analysis_task, question_generation_task, survey_execution_task],
+        agents=[campaign_manager, question_generator],
+        tasks=[question_generation_task, campaign_management_task],
         process=Process.sequential,
         verbose=True,
     )
