@@ -53,16 +53,16 @@ campaign_management_task = Task(
     description="""Analyze and execute survey campaign {campaign_id}: validate campaign
     configuration including question count (use session_id {session_id}) and target audience,
     then return a single survey question based on the generated questions.""",
-    expected_output="A single survey question as a JSON object with a 'question' field.",
+    expected_output="Confirmation of campaign readiness and any recommendations for optimization.",
     output_pydantic=SurveyQuestion,
     agent=campaign_manager,
 )
 
 
 question_generation_task = Task(
-    description="""Generate survey questions for campaign {campaign_id} based on
+    description="""Generate survey question for campaign {campaign_id} based on
         campaign objectives, target audience, research context, and previous responses: {responses}.""",
-    expected_output="A list of survey questions tailored to the campaign and previous responses.",
+    expected_output="A single survey question as a JSON object with a 'question' field.",
     agent=question_generator,
 )
 
@@ -73,7 +73,7 @@ async def generate_question(campaign_id: str, session_id: str, responses: list =
 
     question_crew = Crew(
         agents=[campaign_manager, question_generator],
-        tasks=[question_generation_task, campaign_management_task],
+        tasks=[campaign_management_task, question_generation_task],
         process=Process.sequential,
         verbose=True,
     )
