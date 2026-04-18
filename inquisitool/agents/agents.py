@@ -62,7 +62,7 @@ campaign_management_task = Task(
 question_generation_task = Task(
     description="""Generate survey question for campaign {campaign_id} based on
         campaign objectives, target audience, research context, and previous responses: {responses}.""",
-    expected_output="A single survey question as a JSON object with a 'question' field.",
+    expected_output="A single survey question",
     agent=question_generator,
 )
 
