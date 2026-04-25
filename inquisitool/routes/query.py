@@ -16,12 +16,14 @@ router = APIRouter()
 
 class SurveyRequest(BaseModel):
     user_id: str
-    session_id: str
+    session_id: Optional[str] = None  # None = new session, server generates it
     campaign_id: str
     answer: Optional[str] = None
 
 
 class SurveyResponse(BaseModel):
+    session_id: str
+    session_number: int
     question: str
     question_count: int
     survey_ended: bool
@@ -30,36 +32,35 @@ class SurveyResponse(BaseModel):
 @router.post("/survey", response_model=SurveyResponse)
 async def process_survey(request: SurveyRequest):
     try:
-        # Check if this is a new session (start) or existing (answer)
-        try:
-            interaction = await get_interaction(request.session_id)
-            is_new = False
-        except HTTPException:
-            is_new = True
+        # Check if this is a new session (no session_id) or existing (has session_id + answer)
+        is_new = request.session_id is None
+        if not is_new:
+            interaction = await get_interaction(request.session_id)  # type: ignore
 
         if is_new:
-            # Create new interaction
+            # Create new interaction — server generates session_id
             interaction_data = {
                 "campaign_id": request.campaign_id,
                 "user_id": request.user_id,
-                "session_id": request.session_id,
                 "answers": [],
                 "questions": [],
                 "question_count": 0,
                 "survey_ended": False,
             }
-            await create_interaction(interaction_data)
+            result = await create_interaction(interaction_data)
+            session_id = result["session_id"]
+            session_number = result["session_number"]
             question = await generate_question(
-                campaign_id=request.campaign_id, session_id=request.session_id, responses=["/start"]
+                campaign_id=request.campaign_id, session_id=session_id, responses=["/start"]
             )
-            await update_interaction(
-                request.session_id,
-                {
-                    "questions": [question],
-                    "question_count": 1,
-                },
+            await update_interaction(session_id, {"questions": [question], "question_count": 1})
+            return SurveyResponse(
+                session_id=session_id,
+                session_number=session_number,
+                question=question,
+                question_count=1,
+                survey_ended=False,
             )
-            return SurveyResponse(question=question, question_count=1, survey_ended=False)
 
         # Handle answer
         answers = interaction.get("answers", [])
@@ -67,33 +68,38 @@ async def process_survey(request: SurveyRequest):
         questions = interaction.get("questions", [])
         question_count = len(questions)
 
+        session_id = request.session_id
+        session_number = interaction.get("session_number", 1)
+
         # Check if limit reached
         survey_ended = await check_question_limit(request.campaign_id, question_count)
 
         if survey_ended:
-            await update_interaction(request.session_id, {"answers": answers, "survey_ended": True})
-            await end_survey(request.session_id)
-            return SurveyResponse(question="", question_count=question_count, survey_ended=True)
+            await update_interaction(session_id, {"answers": answers, "survey_ended": True})
+            await end_survey(session_id)
+            return SurveyResponse(
+                session_id=session_id,
+                session_number=session_number,
+                question="",
+                question_count=question_count,
+                survey_ended=True,
+            )
 
         # Ask next question using previous responses
         question_count += 1
-        await update_interaction(
-            request.session_id,
-            {
-                "answers": answers,
-                "question_count": question_count,
-            },
-        )
+        await update_interaction(session_id, {"answers": answers, "question_count": question_count})
 
-        question = await generate_question(request.campaign_id, request.session_id, answers)
+        question = await generate_question(request.campaign_id, session_id, answers)
         questions.append(question)
+        await update_interaction(session_id, {"questions": questions})
 
-        await update_interaction(
-            request.session_id,
-            {"questions": questions},
+        return SurveyResponse(
+            session_id=session_id,
+            session_number=session_number,
+            question=question,
+            question_count=question_count,
+            survey_ended=False,
         )
-
-        return SurveyResponse(question=question, question_count=question_count, survey_ended=False)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

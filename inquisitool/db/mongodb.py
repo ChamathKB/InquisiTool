@@ -159,14 +159,24 @@ async def list_campaigns(skip: int = 0, limit: int = 10) -> list:
 
 
 # Campaign run interactions
+async def get_session_count(user_id: str, campaign_id: str) -> int:
+    """Count how many sessions a user has had for a campaign"""
+    db = await get_mongodb()
+    return await db["campaign_interactions"].count_documents({"user_id": user_id, "campaign_id": campaign_id})
+
+
 async def create_interaction(interaction_data: dict) -> dict:
     """Create a new user interaction record for a campaign run"""
     try:
         db = await get_mongodb()
+        session_id = str(uuid.uuid4())
+        session_number = await get_session_count(interaction_data["user_id"], interaction_data["campaign_id"]) + 1
         interaction_data["created_at"] = datetime.utcnow()
         interaction_data["interaction_id"] = str(uuid.uuid4())
-        result = await db["campaign_interactions"].insert_one(interaction_data)
-        return {"inserted_id": result.inserted_id}
+        interaction_data["session_id"] = session_id
+        interaction_data["session_number"] = session_number
+        await db["campaign_interactions"].insert_one(interaction_data)
+        return {"session_id": session_id, "session_number": session_number}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Interaction creation failed: {str(e)}")
 
