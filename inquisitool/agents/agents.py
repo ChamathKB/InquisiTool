@@ -67,6 +67,25 @@ question_generation_task = Task(
 )
 
 
+async def generate_closing_message(campaign_id: str) -> str:
+    campaign = await get_campaign(campaign_id)
+    name = campaign.get("campaign_name", "this survey")
+    description = campaign.get("campaign_description", "")
+    target_audience = campaign.get("target_audience", "")
+
+    closing_task = Task(
+        description=f"""Write a warm, concise thank-you message (2-3 sentences) to a survey participant.
+        Campaign: {name}. Description: {description}. Audience: {target_audience}.
+        Acknowledge their time, mention the campaign purpose, and express how their input helps.""",
+        expected_output="A short, friendly closing message for the survey participant.",
+        agent=question_generator,
+    )
+
+    crew = Crew(agents=[question_generator], tasks=[closing_task], process=Process.sequential)
+    result = crew.kickoff()
+    return result.raw
+
+
 async def generate_question(campaign_id: str, session_id: str, responses: list = []) -> str:
     campaign = await get_campaign(campaign_id)
     collection_id = campaign.get("collection_id")

@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from inquisitool.agents.agents import generate_question
+from inquisitool.agents.agents import generate_closing_message, generate_question
 from inquisitool.db.mongodb import (
     create_interaction,
     get_interaction,
@@ -75,12 +75,13 @@ async def process_survey(request: SurveyRequest):
         survey_ended = await check_question_limit(request.campaign_id, question_count)
 
         if survey_ended:
+            closing_message = await generate_closing_message(request.campaign_id)
             await update_interaction(session_id, {"answers": answers, "survey_ended": True})
             await end_survey(session_id)
             return SurveyResponse(
                 session_id=session_id,
                 session_number=session_number,
-                question="",
+                question=closing_message,
                 question_count=question_count,
                 survey_ended=True,
             )
