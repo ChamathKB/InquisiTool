@@ -98,7 +98,7 @@ class QdrantSearchTool(BaseTool):
                 query=query_vector,
                 limit=3,
                 score_threshold=0.35,
-            )
+            ).points
             if not results:
                 return "No relevant documents found."
 
