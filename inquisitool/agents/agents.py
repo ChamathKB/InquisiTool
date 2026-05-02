@@ -4,15 +4,13 @@ from pydantic import BaseModel
 from inquisitool.constants import GEMINI_API_KEY, LLM_MODEL
 from inquisitool.db.mongodb import get_campaign
 from inquisitool.tools.campaign_tools import (
-    CampaignDescriptionTool,
+    CampaignInfoTool,
     QuestionCounterTool,
-    TargetAudienceTool,
 )
 from inquisitool.tools.vector_search import QdrantSearchTool
 
 question_counter_tool = QuestionCounterTool()
-campaign_description_tool = CampaignDescriptionTool()
-target_audience_tool = TargetAudienceTool()
+campaign_info_tool = CampaignInfoTool()
 qdrant_tool = QdrantSearchTool()
 
 llm = LLM(
@@ -31,7 +29,7 @@ campaign_manager = Agent(
     goal="Manage and execute survey campaigns",
     backstory="""You are an expert campaign manager who can analyze campaign
     requirements and coordinate survey execution.""",
-    tools=[question_counter_tool, campaign_description_tool, target_audience_tool],
+    tools=[question_counter_tool, campaign_info_tool],
     llm=llm,
     verbose=True,
 )
