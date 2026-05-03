@@ -11,7 +11,7 @@ from qdrant_client import QdrantClient
 
 from inquisitool.constants import LOG_LEVELS, QDRANT_URL, REDIS_URL
 from inquisitool.db.mongodb import mongodb
-from inquisitool.routes import campaings, knowledgebases, query
+from inquisitool.routes import campaigns, knowledgebases, query
 
 
 def create_app():
@@ -33,7 +33,7 @@ def create_app():
         await app.state.session.close()
 
     app = FastAPI(lifespan=lifespan)
-    app.include_router(campaings.router, prefix="/campaigns")
+    app.include_router(campaigns.router, prefix="/campaigns")
     app.include_router(knowledgebases.router, prefix="/knowledgebases")
     app.include_router(query.router, prefix="/query")
     return app
