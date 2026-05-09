@@ -80,5 +80,7 @@ async def process_survey(request: SurveyRequest):
             survey_ended=False,
         )
 
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
