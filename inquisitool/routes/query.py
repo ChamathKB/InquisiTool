@@ -1,7 +1,4 @@
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from inquisitool.agents.agents import generate_closing_message, generate_question
 from inquisitool.db.mongodb import (
@@ -10,24 +7,10 @@ from inquisitool.db.mongodb import (
     get_interaction,
     update_interaction,
 )
+from inquisitool.models.interaction import SurveyRequest, SurveyResponse
 from inquisitool.utils import end_survey
 
 router = APIRouter()
-
-
-class SurveyRequest(BaseModel):
-    user_id: str
-    session_id: Optional[str] = None  # None = new session, server generates it
-    campaign_id: str
-    answer: Optional[str] = None
-
-
-class SurveyResponse(BaseModel):
-    session_id: str
-    session_number: int
-    question: str
-    question_count: int
-    survey_ended: bool
 
 
 @router.post("/survey", response_model=SurveyResponse)
