@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from inquisitool.agents.agents import generate_closing_message, generate_question
 from inquisitool.db.mongodb import (
@@ -7,6 +7,13 @@ from inquisitool.db.mongodb import (
     get_interaction,
     update_interaction,
 )
+from inquisitool.db.redis import (
+    cache_delete,
+    cache_get,
+    cache_set,
+    campaign_key,
+    interaction_key,
+)
 from inquisitool.models.interaction import SurveyRequest, SurveyResponse
 from inquisitool.utils import end_survey
 
@@ -14,12 +21,16 @@ router = APIRouter()
 
 
 @router.post("/survey", response_model=SurveyResponse)
-async def process_survey(request: SurveyRequest):
+async def process_survey(request: SurveyRequest, req: Request):
     try:
+        redis = req.app.state.redis_client
         is_new = request.session_id is None
 
         if is_new:
-            campaign = await get_campaign(request.campaign_id)
+            campaign = await cache_get(redis, campaign_key(request.campaign_id))
+            if campaign is None:
+                campaign = await get_campaign(request.campaign_id)
+                await cache_set(redis, campaign_key(request.campaign_id), campaign)
             result = await create_interaction(
                 {
                     "campaign_id": request.campaign_id,
@@ -43,7 +54,10 @@ async def process_survey(request: SurveyRequest):
                 survey_ended=False,
             )
 
-        interaction = await get_interaction(request.session_id)  # type: ignore
+        interaction = await cache_get(redis, interaction_key(request.session_id))  # type: ignore
+        if interaction is None:
+            interaction = await get_interaction(request.session_id)  # type: ignore
+            await cache_set(redis, interaction_key(request.session_id), interaction)  # type: ignore
         session_id = request.session_id
         session_number = interaction.get("session_number", 1)
         campaign = interaction.get("campaign")  # type: ignore
@@ -51,11 +65,12 @@ async def process_survey(request: SurveyRequest):
         answers.append(request.answer)
         questions = interaction.get("questions", [])
         question_count = len(questions)
-        question_limit = campaign.get("number_of_questions", 0)
+        question_limit = campaign.get("number_of_questions", 0)  # type: ignore
 
         if question_count >= question_limit:
-            closing_message = generate_closing_message(campaign)
+            closing_message = generate_closing_message(campaign)  # type: ignore
             await update_interaction(session_id, {"answers": answers, "survey_ended": True})
+            await cache_delete(redis, interaction_key(session_id))  # type: ignore
             await end_survey(session_id)
             return SurveyResponse(
                 session_id=session_id,
@@ -66,11 +81,11 @@ async def process_survey(request: SurveyRequest):
             )
 
         question_turn = question_count + 1
-        question = generate_question(campaign, question_turn, answers)
+        question = generate_question(campaign, question_turn, answers)  # type: ignore
         questions.append(question)
-        await update_interaction(
-            session_id, {"answers": answers, "questions": questions, "question_count": question_turn}
-        )
+        updated = {"answers": answers, "questions": questions, "question_count": question_turn}
+        await update_interaction(session_id, updated)
+        await cache_set(redis, interaction_key(session_id), {**interaction, **updated})  # type: ignore
 
         return SurveyResponse(
             session_id=session_id,
