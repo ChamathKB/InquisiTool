@@ -12,8 +12,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "agentic_rag_db")
-KNOWLEDGEBASE_COLLECTIONS = os.getenv("COLLECTION_KNOWLEDGEBASE", "knowledge_bases")
-DOCUMENT_COLLECTIONS = os.getenv("COLLECTION_DOCUMENT_UPLOADS", "document_collections")
+KNOWLEDGEBASE_COLLECTION = os.getenv("COLLECTION_KNOWLEDGEBASE", "knowledge_bases")
+DOCUMENT_COLLECTION = os.getenv("COLLECTION_DOCUMENT_UPLOADS", "document_collections")
+CAMPAIGNS_COLLECTION = os.getenv("COLLECTION_CAMPAIGNS", "campaigns")
+CAMPAIGN_INTERACTIONS_COLLECTION = os.getenv("COLLECTION_CAMPAIGN_INTERACTIONS", "campaign_interactions")
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 

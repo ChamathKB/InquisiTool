@@ -5,8 +5,10 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from qdrant_client import QdrantClient
 
 from inquisitool.constants import (
-    DOCUMENT_COLLECTIONS,
-    KNOWLEDGEBASE_COLLECTIONS,
+    CAMPAIGN_INTERACTIONS_COLLECTION,
+    CAMPAIGNS_COLLECTION,
+    DOCUMENT_COLLECTION,
+    KNOWLEDGEBASE_COLLECTION,
     MONGO_DB_NAME,
     MONGO_URL,
 )
@@ -56,14 +58,14 @@ async def create_documents_collection(qdrant: QdrantClient, collection_name: str
         "collection_name": collection_name,
         "uploaded_at": datetime.utcnow(),
     }
-    result = await db[KNOWLEDGEBASE_COLLECTIONS].insert_one(upload_entry)
+    result = await db[KNOWLEDGEBASE_COLLECTION].insert_one(upload_entry)
     create_collection(qdrant, result.inserted_id)
     return {"inserted_id": result.inserted_id}
 
 
 async def delete_documents_collection(qdrant: QdrantClient, collection_id: str) -> dict:
     db = await get_mongodb()
-    result = await db[KNOWLEDGEBASE_COLLECTIONS].delete_one({"_id": collection_id})
+    result = await db[KNOWLEDGEBASE_COLLECTION].delete_one({"_id": collection_id})
     delete_collection(qdrant, collection_id)
     return {"deleted_count": result.deleted_count}
 
@@ -76,7 +78,7 @@ async def upload_document(file_path: str, qdrant: QdrantClient, collection_id: s
         "file_path": file_path,
         "uploaded_at": datetime.utcnow(),
     }
-    result = await db[DOCUMENT_COLLECTIONS].insert_one(upload_entry)
+    result = await db[DOCUMENT_COLLECTION].insert_one(upload_entry)
     return {"inserted_id": result.inserted_id}
 
 
@@ -86,13 +88,13 @@ async def create_campaign(campaign_data: dict) -> dict:
     campaign_data["created_at"] = datetime.utcnow()
     campaign_data["updated_at"] = datetime.utcnow()
     campaign_data["campaign_id"] = str(uuid.uuid4())
-    await db["campaigns"].insert_one(campaign_data)
+    await db[CAMPAIGNS_COLLECTION].insert_one(campaign_data)
     return {"campaign_id": campaign_data["campaign_id"]}
 
 
 async def get_campaign(campaign_id: str) -> dict:
     db = await get_mongodb()
-    campaign = await db["campaigns"].find_one({"campaign_id": campaign_id})
+    campaign = await db[CAMPAIGNS_COLLECTION].find_one({"campaign_id": campaign_id})
     if campaign is None:
         raise ValueError(f"Campaign not found: {campaign_id}")
     campaign["_id"] = str(campaign["_id"])
@@ -102,7 +104,7 @@ async def get_campaign(campaign_id: str) -> dict:
 async def update_campaign(campaign_id: str, update_data: dict) -> dict:
     db = await get_mongodb()
     update_data["updated_at"] = datetime.utcnow()
-    result = await db["campaigns"].update_one({"campaign_id": campaign_id}, {"$set": update_data})
+    result = await db[CAMPAIGNS_COLLECTION].update_one({"campaign_id": campaign_id}, {"$set": update_data})
     if result.modified_count == 0:
         raise ValueError(f"Campaign not found: {campaign_id}")
     return {"modified_count": result.modified_count}
@@ -110,7 +112,7 @@ async def update_campaign(campaign_id: str, update_data: dict) -> dict:
 
 async def delete_campaign(campaign_id: str) -> dict:
     db = await get_mongodb()
-    result = await db["campaigns"].delete_one({"campaign_id": campaign_id})
+    result = await db[CAMPAIGNS_COLLECTION].delete_one({"campaign_id": campaign_id})
     if result.deleted_count == 0:
         raise ValueError(f"Campaign not found: {campaign_id}")
     return {"deleted_count": result.deleted_count}
@@ -118,7 +120,7 @@ async def delete_campaign(campaign_id: str) -> dict:
 
 async def list_campaigns(skip: int = 0, limit: int = 10) -> list:
     db = await get_mongodb()
-    cursor = db["campaigns"].find().skip(skip).limit(limit)
+    cursor = db[CAMPAIGNS_COLLECTION].find().skip(skip).limit(limit)
     campaigns = await cursor.to_list(length=limit)
     for campaign in campaigns:
         campaign["_id"] = str(campaign["_id"])
@@ -129,7 +131,7 @@ async def list_campaigns(skip: int = 0, limit: int = 10) -> list:
 async def get_session_count(user_id: str, campaign_id: str) -> int:
     """Count how many sessions a user has had for a campaign"""
     db = await get_mongodb()
-    return await db["campaign_interactions"].count_documents({"user_id": user_id, "campaign_id": campaign_id})
+    return await db[CAMPAIGN_INTERACTIONS_COLLECTION].count_documents({"user_id": user_id, "campaign_id": campaign_id})
 
 
 async def create_interaction(interaction_data: dict) -> dict:
@@ -141,14 +143,14 @@ async def create_interaction(interaction_data: dict) -> dict:
     interaction_data["interaction_id"] = str(uuid.uuid4())
     interaction_data["session_id"] = session_id
     interaction_data["session_number"] = session_number
-    await db["campaign_interactions"].insert_one(interaction_data)
+    await db[CAMPAIGN_INTERACTIONS_COLLECTION].insert_one(interaction_data)
     return {"session_id": session_id, "session_number": session_number}
 
 
 async def get_interaction(session_id: str) -> dict:
     """Get a specific interaction by session_id"""
     db = await get_mongodb()
-    interaction = await db["campaign_interactions"].find_one({"session_id": session_id})
+    interaction = await db[CAMPAIGN_INTERACTIONS_COLLECTION].find_one({"session_id": session_id})
     if interaction is None:
         raise ValueError(f"Interaction not found: {session_id}")
     return interaction
@@ -158,7 +160,7 @@ async def update_interaction(session_id: str, update_data: dict) -> dict:
     """Update an existing interaction by session_id"""
     db = await get_mongodb()
     update_data["updated_at"] = datetime.utcnow()
-    result = await db["campaign_interactions"].update_one({"session_id": session_id}, {"$set": update_data})
+    result = await db[CAMPAIGN_INTERACTIONS_COLLECTION].update_one({"session_id": session_id}, {"$set": update_data})
     if result.modified_count == 0:
         raise ValueError(f"Interaction not found: {session_id}")
     return {"modified_count": result.modified_count}
@@ -167,7 +169,7 @@ async def update_interaction(session_id: str, update_data: dict) -> dict:
 async def delete_interaction(interaction_id: str) -> dict:
     """Delete an interaction"""
     db = await get_mongodb()
-    result = await db["campaign_interactions"].delete_one({"interaction_id": interaction_id})
+    result = await db[CAMPAIGN_INTERACTIONS_COLLECTION].delete_one({"interaction_id": interaction_id})
     if result.deleted_count == 0:
         raise ValueError(f"Interaction not found: {interaction_id}")
     return {"deleted_count": result.deleted_count}
@@ -176,5 +178,5 @@ async def delete_interaction(interaction_id: str) -> dict:
 async def list_interactions(campaign_id: str, skip: int = 0, limit: int = 10) -> list:
     """List all interactions for a specific campaign"""
     db = await get_mongodb()
-    cursor = db["campaign_interactions"].find({"campaign_id": campaign_id}).skip(skip).limit(limit)
+    cursor = db[CAMPAIGN_INTERACTIONS_COLLECTION].find({"campaign_id": campaign_id}).skip(skip).limit(limit)
     return await cursor.to_list(length=limit)
