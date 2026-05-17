@@ -10,18 +10,16 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
 
 from inquisitool.constants import EMBEDDING_MODEL, GEMINI_API_KEY, QDRANT_URL
+from inquisitool.db.redis import embedding_cache_get, embedding_cache_set, embedding_key
 
 embeddings = genai.Client(api_key=GEMINI_API_KEY)
 
 
 def get_embeddings(text: str) -> list[float]:
-    """
-    Get embeddings for a given text using Gemini embedding model
-    Args:
-        text (str): Text to get embeddings for
-    Returns:
-        list[float]: Embeddings for the given text
-    """
+    key = embedding_key(text)
+    cached = embedding_cache_get(key)
+    if cached is not None:
+        return cached
     result = embeddings.models.embed_content(
         model=EMBEDDING_MODEL,
         contents=text,
@@ -30,7 +28,9 @@ def get_embeddings(text: str) -> list[float]:
             output_dimensionality=1536,
         ),
     )
-    return result.embeddings[0].values
+    vector = result.embeddings[0].values
+    embedding_cache_set(key, vector)
+    return vector
 
 
 def extract_text_from_pdf(pdf_path: str) -> list[str]:
