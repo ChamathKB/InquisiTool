@@ -2,23 +2,55 @@
 
 Redis is used as a caching layer to reduce latency and external API calls across the survey flow.
 
-## High Value
+## Implemented
 
-- **Session/interaction state caching** — `get_interaction` is called on every survey request to fetch the full interaction document (campaign, answers, questions). Caching by `session_id` avoids repeated MongoDB reads for active sessions.
-- **Campaign data caching** — `get_campaign` and the `CampaignInfoTool`/`QuestionCounterTool` both query MongoDB for campaign data that is immutable during a survey. Caching by `campaign_id` eliminates redundant DB reads across all sessions under the same campaign.
+### Session/Interaction State Caching
 
-### Moderate Value
+`get_interaction` is called on every survey request to fetch the full interaction document (campaign, answers, questions). Cached by `session_id`, updated in-place after each question turn, and deleted on survey end.
 
-- **Embedding cache** — `get_embeddings()` calls the Gemini API on every query. Caching `query_text → vector` avoids redundant API calls and reduces cost when similar queries recur across sessions.
-- **Rate limiting** — Redis provides a standard backing store (token bucket / sliding window) for per `campaign_id` or `user_id` rate limiting against Gemini API quotas.
+- Key: `interaction:<session_id>`
+- TTL: 1 hour
+- Client: async (`app.state.redis_client`)
+
+### Campaign Data Caching
+
+`get_campaign` is called on every new session. Campaign data is immutable during a survey, so it is cached on first read and reused across all sessions under the same campaign.
+
+- Key: `campaign:<campaign_id>`
+- TTL: 1 hour
+- Client: async (`app.state.redis_client`)
+
+### Embedding Cache
+
+`get_embeddings()` calls the Gemini API on every query. Cached by `hash(text)` so identical query text skips the API call entirely. Used by both `QdrantSearchTool` and `load_pdf_to_qdrant`.
+
+- Key: `embedding:<hash(text)>`
+- TTL: 24 hours
+- Client: sync (`db/redis.py` singleton) — required since `get_embeddings` is a sync function
+
+## Deferred
+
+### Rate Limiting
+
+Rate limiting against Gemini API quotas is deferred to a future auth service. Reasons:
+
+- `user_id` is currently an unauthenticated request field — easy to spoof, making rate limiting ineffective
+- The natural place for rate limiting is auth middleware or an API gateway (e.g. AWS API Gateway, nginx) with real authenticated identities
+- Avoids mixing rate limit logic into the survey flow prematurely
 
 ## Monitoring
 
 ### Application Logs
 
-Cache hits and misses are logged automatically via `db/redis.py`:
+Cache hits and misses are logged at `DEBUG` level via `db/redis.py`. Run with `--log-level debug` to see them:
 
 ```bash
+inquisitool run --log-level debug
+```
+
+Output:
+
+```
 [*] cache hit: interaction:xyz-456
 [*] cache miss: campaign:abc-123
 ```
@@ -46,6 +78,7 @@ KEYS *
 # inspect a specific key
 GET interaction:<session_id>
 GET campaign:<campaign_id>
+GET embedding:<hash>
 
 # check TTL remaining on a key
 TTL interaction:<session_id>
@@ -61,7 +94,7 @@ docker run -p 5540:5540 redis/redisinsight
 
 Then open `http://localhost:5540` and connect to `inquisitool-redis:6379`.
 
-### Not Worth It
+## Not Worth It
 
 - **Qdrant search results** — Queries are dynamic and personalized per session, so cache hit rate would be too low to justify.
 - **Closing messages** — Generated once per session; caching adds complexity with minimal benefit.
