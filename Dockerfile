@@ -8,24 +8,23 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml uv.lock README.md ./
 COPY inquisitool/ ./inquisitool/
 
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir .
+RUN uv sync --no-dev --no-editable --frozen
 
 # Runtime stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/inquisitool ./inquisitool
 
-ENV PATH="/opt/venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
 RUN mkdir -p upload
 
