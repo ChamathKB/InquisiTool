@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 
 from inquisitool.agents.agents import generate_closing_message, generate_question
+from inquisitool.auth import limiter
 from inquisitool.db.mongodb import (
     create_interaction,
     get_campaign,
@@ -21,6 +22,7 @@ router = APIRouter()
 
 
 @router.post("/survey", response_model=SurveyResponse)
+@limiter.limit("30/minute")
 async def process_survey(request: SurveyRequest, req: Request):
     try:
         redis = req.app.state.redis_client
