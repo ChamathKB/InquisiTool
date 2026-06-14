@@ -71,3 +71,4 @@ volumes:
   mongodb_data:
   redis_data:
   qdrant_data:
+  keycloak_db_data:
