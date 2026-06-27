@@ -19,6 +19,9 @@ CAMPAIGN_INTERACTIONS_COLLECTION = os.getenv("COLLECTION_CAMPAIGN_INTERACTIONS",
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://localhost:8080")
+KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "inquisitool")
+
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "upload")

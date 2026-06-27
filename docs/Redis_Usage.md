@@ -28,15 +28,14 @@ Redis is used as a caching layer to reduce latency and external API calls across
 - TTL: 24 hours
 - Client: sync (`db/redis.py` singleton) — required since `get_embeddings` is a sync function
 
-## Deferred
-
 ### Rate Limiting
 
-Rate limiting against Gemini API quotas is deferred to a future auth service. Reasons:
+Rate limiting is implemented via `slowapi` using Redis as the backing store, keyed by remote IP. Limits are enforced after Keycloak JWT auth on all endpoints.
 
-- `user_id` is currently an unauthenticated request field — easy to spoof, making rate limiting ineffective
-- The natural place for rate limiting is auth middleware or an API gateway (e.g. AWS API Gateway, nginx) with real authenticated identities
-- Avoids mixing rate limit logic into the survey flow prematurely
+- `/query/survey` — 30 requests / minute
+- All other endpoints — no limit set (auth enforced only)
+
+See `docs/Rate_Limits.md` for full reference.
 
 ## Monitoring
 

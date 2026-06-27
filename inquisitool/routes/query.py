@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 
 from inquisitool.agents.agents import generate_closing_message, generate_question
+from inquisitool.auth import limiter
 from inquisitool.db.mongodb import (
     create_interaction,
     get_campaign,
@@ -21,20 +22,21 @@ router = APIRouter()
 
 
 @router.post("/survey", response_model=SurveyResponse)
-async def process_survey(request: SurveyRequest, req: Request):
+@limiter.limit("30/minute")
+async def process_survey(body: SurveyRequest, request: Request):
     try:
-        redis = req.app.state.redis_client
-        is_new = request.session_id is None
+        redis = request.app.state.redis_client
+        is_new = body.session_id is None
 
         if is_new:
-            campaign = await cache_get(redis, campaign_key(request.campaign_id))
+            campaign = await cache_get(redis, campaign_key(body.campaign_id))
             if campaign is None:
-                campaign = await get_campaign(request.campaign_id)
-                await cache_set(redis, campaign_key(request.campaign_id), campaign)
+                campaign = await get_campaign(body.campaign_id)
+                await cache_set(redis, campaign_key(body.campaign_id), campaign)
             result = await create_interaction(
                 {
-                    "campaign_id": request.campaign_id,
-                    "user_id": request.user_id,
+                    "campaign_id": body.campaign_id,
+                    "user_id": body.user_id,
                     "campaign": campaign,
                     "answers": [],
                     "questions": [],
@@ -54,15 +56,15 @@ async def process_survey(request: SurveyRequest, req: Request):
                 survey_ended=False,
             )
 
-        interaction = await cache_get(redis, interaction_key(request.session_id))  # type: ignore
+        interaction = await cache_get(redis, interaction_key(body.session_id))  # type: ignore
         if interaction is None:
-            interaction = await get_interaction(request.session_id)  # type: ignore
-            await cache_set(redis, interaction_key(request.session_id), interaction)  # type: ignore
-        session_id = request.session_id
+            interaction = await get_interaction(body.session_id)  # type: ignore
+            await cache_set(redis, interaction_key(body.session_id), interaction)  # type: ignore
+        session_id = body.session_id
         session_number = interaction.get("session_number", 1)
         campaign = interaction.get("campaign")  # type: ignore
         answers = interaction.get("answers", [])
-        answers.append(request.answer)
+        answers.append(body.answer)
         questions = interaction.get("questions", [])
         question_count = len(questions)
         question_limit = campaign.get("number_of_questions", 0)  # type: ignore

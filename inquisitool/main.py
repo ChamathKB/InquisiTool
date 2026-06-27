@@ -5,10 +5,13 @@ import aiohttp
 import click
 import redis.asyncio as redis
 import uvicorn
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from pydantic import ValidationError
 from qdrant_client import QdrantClient
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
+from inquisitool.auth import limiter, require_auth
 from inquisitool.constants import LOG_LEVELS, QDRANT_URL, REDIS_URL
 from inquisitool.db.mongodb import mongodb
 from inquisitool.routes import campaigns, knowledgebases, query
@@ -32,7 +35,9 @@ def create_app():
         await app.state.mongodb.close()
         await app.state.session.close()
 
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(lifespan=lifespan, dependencies=[Depends(require_auth)])
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.include_router(campaigns.router, prefix="/campaigns")
     app.include_router(knowledgebases.router, prefix="/knowledgebases")
     app.include_router(query.router, prefix="/query")
