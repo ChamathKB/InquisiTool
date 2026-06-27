@@ -1,6 +1,6 @@
 [project]
 name = "inquisitool"
-version = "0.1.0"
+version = "0.1.1"
 description = "Agentic survey automation tool"
 authors = [
     {name = "ChamathKB",email = "kaushalyabandaraatta@gmail.com"}
