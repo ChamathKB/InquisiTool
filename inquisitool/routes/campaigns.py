@@ -9,7 +9,7 @@ from inquisitool.db.mongodb import (
     list_campaigns,
     update_campaign,
 )
-from inquisitool.models.campaign import CampaignCreate, CampaignResponse
+from inquisitool.models.campaign import CampaignCreate, CampaignResponse, CampaignUpdate
 
 router = APIRouter()
 
@@ -39,9 +39,9 @@ async def get_campaign_endpoint(campaign_id: str):
 
 
 @router.put("/campaigns/{campaign_id}", response_model=CampaignResponse)
-async def update_campaign_endpoint(campaign_id: str, updated_campaign: CampaignCreate):
+async def update_campaign_endpoint(campaign_id: str, updated_campaign: CampaignUpdate):
     try:
-        await update_campaign(campaign_id, updated_campaign.model_dump())
+        await update_campaign(campaign_id, updated_campaign.model_dump(exclude_none=True))
         return await get_campaign(campaign_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

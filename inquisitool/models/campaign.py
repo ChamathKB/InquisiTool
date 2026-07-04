@@ -15,6 +15,17 @@ class CampaignCreate(BaseModel):
     collection_id: str
 
 
+class CampaignUpdate(BaseModel):
+    campaign_name: str | None = None
+    campaign_description: str | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    status: str | None = None
+    target_audience: str | None = None
+    number_of_questions: int | None = None
+    collection_id: str | None = None
+
+
 class CampaignResponse(BaseModel):
     campaign_id: UUID
     campaign_name: str
