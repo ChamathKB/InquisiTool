@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 
 from inquisitool.agents.agents import generate_closing_message, generate_question
@@ -19,6 +21,7 @@ from inquisitool.models.interaction import SurveyRequest, SurveyResponse
 from inquisitool.utils import end_survey
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/survey", response_model=SurveyResponse)
@@ -46,6 +49,9 @@ async def process_survey(body: SurveyRequest, request: Request):
             )
             session_id = result["session_id"]
             session_number = result["session_number"]
+            logger.info(
+                "New survey session started: session=%s campaign=%s user=%s", session_id, body.campaign_id, body.user_id
+            )
             question = generate_question(campaign, question_turn=1)
             await update_interaction(session_id, {"questions": [question], "question_count": 1})
             return SurveyResponse(
@@ -74,6 +80,7 @@ async def process_survey(body: SurveyRequest, request: Request):
             await update_interaction(session_id, {"answers": answers, "survey_ended": True})
             await cache_delete(redis, interaction_key(session_id))  # type: ignore
             await end_survey(session_id)
+            logger.info("Survey ended: session=%s questions=%d", session_id, question_count)
             return SurveyResponse(
                 session_id=session_id,
                 session_number=session_number,
@@ -98,6 +105,8 @@ async def process_survey(body: SurveyRequest, request: Request):
         )
 
     except ValueError as e:
+        logger.warning("Survey request not found: %s", e)
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        logger.error("Survey processing error: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
