@@ -15,8 +15,9 @@ AI-powered survey application that generates dynamic, context-aware survey quest
 - **CrewAI** - Multi-agent orchestration
 - **MongoDB** - Document storage
 - **Qdrant** - Vector database for semantic search
-- **Redis** - Caching layer
+- **Redis** - Caching and rate limiting
 - **Google Gemini** - LLM and embeddings
+- **Keycloak** - Authentication and authorization (OIDC / OAuth2)
 
 ## Development Setup
 
@@ -26,6 +27,7 @@ AI-powered survey application that generates dynamic, context-aware survey quest
 - MongoDB
 - Qdrant
 - Redis
+- Keycloak
 
 ### Installation
 
@@ -45,6 +47,10 @@ AI-powered survey application that generates dynamic, context-aware survey quest
     MONGO_URL=mongodb://localhost:27017
     QDRANT_URL=http://localhost:6333
     REDIS_URL=redis://localhost:6379
+    KEYCLOAK_URL=http://localhost:8080
+    KEYCLOAK_REALM=inquisitool
+    KEYCLOAK_CLIENT_ID=inquisitool-api
+    KEYCLOAK_CLIENT_SECRET=your_client_secret
     ```
 
 4. Start services:
@@ -58,13 +64,33 @@ AI-powered survey application that generates dynamic, context-aware survey quest
 
     # Redis
     redis-server
+
+    # Keycloak (with Postgres backend)
+    docker-compose up -d keycloak
     ```
 
-5. Run the application:
+5. Set up Keycloak realm and client — see [docs/Keycloak_Auth.md](docs/Keycloak_Auth.md) for the full steps.
+
+6. Run the application:
 
     ```bash
     inquisitool run --host 0.0.0.0 --port 8000
     ```
+
+## Authentication
+
+All API endpoints require a valid Bearer token issued by Keycloak. See [docs/Keycloak_Auth.md](docs/Keycloak_Auth.md) for setup details.
+
+To get a token during development (when the frontend is not running):
+
+```bash
+# prints the full token + a ready-to-use curl example
+python scripts/get_token.py
+
+# raw token only — useful for piping
+export TOKEN=$(python scripts/get_token.py --raw)
+curl http://localhost:8000/campaigns/ -H "Authorization: Bearer $TOKEN"
+```
 
 ## Deployment
 
@@ -74,10 +100,12 @@ AI-powered survey application that generates dynamic, context-aware survey quest
 docker-compose up -d
 ```
 
+Includes: MongoDB, Redis, Qdrant, Keycloak (+ Postgres backend).
+
 ### Manual Deployment
 
 1. Set environment variables
-2. Ensure MongoDB, Qdrant, and Redis are accessible
+2. Ensure MongoDB, Qdrant, Redis, and Keycloak are accessible
 3. Run with production ASGI server:
 
     ```bash
@@ -86,8 +114,16 @@ docker-compose up -d
 
 ## API Endpoints
 
+All endpoints require `Authorization: Bearer <token>`.
+
 - `POST /campaigns/` - Create campaign
 - `GET /campaigns/` - List campaigns
 - `POST /knowledgebases/create_collection` - Create knowledge base
 - `POST /knowledgebases/upload_docs` - Upload PDF documents
-- `POST /query/survey` - Process survey interaction
+- `POST /query/survey` - Process survey interaction _(rate limited: 30 req/min)_
+
+## Docs
+
+- [Keycloak Auth](docs/Keycloak_Auth.md) — auth setup, realm/client config, production checklist
+- [Rate Limits](docs/Rate_Limits.md) — current limits, how to add more, switching to user-based limiting
+- [Redis Usage](docs/Redis_Usage.md) — caching strategy and monitoring
