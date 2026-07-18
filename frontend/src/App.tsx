@@ -10,8 +10,8 @@ function Nav() {
     <nav className="navbar">
       <span className="brand">InquisiTool</span>
       <div className="nav-links">
-        <NavLink to="/">Campaigns</NavLink>
         <NavLink to="/knowledgebases">Knowledge Bases</NavLink>
+        <NavLink to="/">Campaigns</NavLink>
       </div>
       <button className="btn-ghost" onClick={logout}>Logout</button>
     </nav>
