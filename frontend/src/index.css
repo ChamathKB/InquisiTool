@@ -186,3 +186,22 @@ a.btn-primary:hover { background: var(--primary-hover); }
   gap: 8px;
 }
 .chat-input input { flex: 1; }
+
+/* ── Collection ID display ── */
+.collection-id-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.collection-id {
+  background: #f3f4f6;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: all;
+}
+.collection-id:hover { background: #e0e7ff; border-color: var(--primary); }

@@ -4,6 +4,7 @@ import { createCollection, uploadDocs, deleteCollection } from '../api';
 export default function KnowledgeBasePage() {
   const [collectionName, setCollectionName] = useState('');
   const [collectionMsg, setCollectionMsg] = useState('');
+  const [lastCollectionId, setLastCollectionId] = useState('');
 
   const [file, setFile] = useState<File | null>(null);
   const [uploadCollectionId, setUploadCollectionId] = useState('');
@@ -22,6 +23,9 @@ export default function KnowledgeBasePage() {
     try {
       const res = await createCollection(collectionName);
       setCollectionMsg(res.message);
+      // extract the id from the message: "... collection id <id>!"
+      const match = res.message.match(/collection id ([a-f0-9]+)/i);
+      if (match) setLastCollectionId(match[1]);
       setCollectionName('');
     } catch (e: any) {
       setError(e.message);
@@ -78,6 +82,19 @@ export default function KnowledgeBasePage() {
             <button type="submit">Create</button>
           </form>
           {collectionMsg && <p className="success">{collectionMsg}</p>}
+          {lastCollectionId && (
+            <div className="collection-id-box">
+              <span>Collection ID:</span>
+              <code
+                className="collection-id"
+                title="Click to copy"
+                onClick={() => navigator.clipboard.writeText(lastCollectionId)}
+              >
+                {lastCollectionId}
+              </code>
+              <span className="muted">(click to copy)</span>
+            </div>
+          )}
         </div>
 
         <div className="card">
