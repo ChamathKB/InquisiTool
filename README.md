@@ -116,14 +116,18 @@ Includes: MongoDB, Redis, Qdrant, Keycloak (+ Postgres backend).
 
 All endpoints require `Authorization: Bearer <token>`.
 
-- `POST /campaigns/` - Create campaign
-- `GET /campaigns/` - List campaigns
+- `POST /campaigns/create_campaign` - Create campaign
+- `GET /campaigns/list_campaigns` - List campaigns
+- `GET /campaigns/get_campaign/{campaign_id}` - Get campaign
+- `PUT /campaigns/update_campaign/{campaign_id}` - Update campaign
+- `DELETE /campaigns/delete_campaign/{campaign_id}` - Delete campaign
 - `POST /knowledgebases/create_collection` - Create knowledge base
 - `POST /knowledgebases/upload_docs` - Upload PDF documents
 - `POST /query/survey` - Process survey interaction _(rate limited: 30 req/min)_
 
 ## Docs
 
+- [Frontend](docs/Frontend.md) — React frontend setup, Keycloak client config, production build
 - [Keycloak Auth](docs/Keycloak_Auth.md) — auth setup, realm/client config, production checklist
 - [Rate Limits](docs/Rate_Limits.md) — current limits, how to add more, switching to user-based limiting
 - [Redis Usage](docs/Redis_Usage.md) — caching strategy and monitoring

@@ -24,7 +24,22 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/survey", response_model=SurveyResponse)
+@router.post(
+    "/survey",
+    response_model=SurveyResponse,
+    summary="Process a survey interaction",
+    description=(
+        "Handles both the start of a new survey session and subsequent responses within an existing session. "
+        "Pass `session_id: null` to start a new session — the agent will return the first question. "
+        "For follow-up turns, include the `session_id` from the previous response along with the user's `answer`. "
+        "The survey ends automatically once the campaign's question limit is reached."
+    ),
+    responses={
+        404: {"description": "Campaign or session not found"},
+        429: {"description": "Rate limit exceeded (30 requests/minute)"},
+        500: {"description": "Internal server error"},
+    },
+)
 @limiter.limit("30/minute")
 async def process_survey(body: SurveyRequest, request: Request):
     try:

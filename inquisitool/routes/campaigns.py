@@ -16,14 +16,26 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/create_campaign", response_model=CampaignResponse)
+@router.post(
+    "/create_campaign",
+    response_model=CampaignResponse,
+    summary="Create a campaign",
+    description="Creates a new survey campaign with the provided configuration.",
+    responses={500: {"description": "Internal server error"}},
+)
 async def create_campaign_endpoint(campaign: CampaignCreate):
     result = await create_campaign(campaign.model_dump())
     logger.info("Campaign created: %s", result["campaign_id"])
     return await get_campaign(result["campaign_id"])
 
 
-@router.get("/list_campaigns", response_model=List[CampaignResponse])
+@router.get(
+    "/list_campaigns",
+    response_model=List[CampaignResponse],
+    summary="List all campaigns",
+    description="Returns a list of all campaigns.",
+    responses={500: {"description": "Internal server error"}},
+)
 async def get_campaigns():
     try:
         return await list_campaigns()
@@ -32,7 +44,13 @@ async def get_campaigns():
         raise HTTPException(status_code=500, detail=f"Campaign listing failed: {e}")
 
 
-@router.get("/get_campaign/{campaign_id}", response_model=CampaignResponse)
+@router.get(
+    "/get_campaign/{campaign_id}",
+    response_model=CampaignResponse,
+    summary="Get a campaign",
+    description="Retrieves a single campaign by its ID.",
+    responses={404: {"description": "Campaign not found"}, 500: {"description": "Internal server error"}},
+)
 async def get_campaign_endpoint(campaign_id: str):
     try:
         return await get_campaign(campaign_id)
@@ -42,7 +60,13 @@ async def get_campaign_endpoint(campaign_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/update_campaign/{campaign_id}", response_model=CampaignResponse)
+@router.put(
+    "/update_campaign/{campaign_id}",
+    response_model=CampaignResponse,
+    summary="Update a campaign",
+    description="Partially updates a campaign. Only the fields provided in the request body will be updated.",
+    responses={404: {"description": "Campaign not found"}, 500: {"description": "Internal server error"}},
+)
 async def update_campaign_endpoint(campaign_id: str, updated_campaign: CampaignUpdate):
     try:
         await update_campaign(campaign_id, updated_campaign.model_dump(exclude_none=True))
@@ -55,7 +79,12 @@ async def update_campaign_endpoint(campaign_id: str, updated_campaign: CampaignU
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/delete_campaign/{campaign_id}")
+@router.delete(
+    "/delete_campaign/{campaign_id}",
+    summary="Delete a campaign",
+    description="Permanently deletes a campaign by its ID.",
+    responses={404: {"description": "Campaign not found"}, 500: {"description": "Internal server error"}},
+)
 async def delete_campaign_endpoint(campaign_id: str):
     try:
         await delete_campaign(campaign_id)
