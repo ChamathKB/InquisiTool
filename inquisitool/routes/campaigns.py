@@ -16,14 +16,14 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/", response_model=CampaignResponse)
+@router.post("/create_campaign", response_model=CampaignResponse)
 async def create_campaign_endpoint(campaign: CampaignCreate):
     result = await create_campaign(campaign.model_dump())
     logger.info("Campaign created: %s", result["campaign_id"])
     return await get_campaign(result["campaign_id"])
 
 
-@router.get("/", response_model=List[CampaignResponse])
+@router.get("/list_campaigns", response_model=List[CampaignResponse])
 async def get_campaigns():
     try:
         return await list_campaigns()
@@ -32,7 +32,7 @@ async def get_campaigns():
         raise HTTPException(status_code=500, detail=f"Campaign listing failed: {e}")
 
 
-@router.get("/{campaign_id}", response_model=CampaignResponse)
+@router.get("/get_campaign/{campaign_id}", response_model=CampaignResponse)
 async def get_campaign_endpoint(campaign_id: str):
     try:
         return await get_campaign(campaign_id)
@@ -42,7 +42,7 @@ async def get_campaign_endpoint(campaign_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/{campaign_id}", response_model=CampaignResponse)
+@router.put("/update_campaign/{campaign_id}", response_model=CampaignResponse)
 async def update_campaign_endpoint(campaign_id: str, updated_campaign: CampaignUpdate):
     try:
         await update_campaign(campaign_id, updated_campaign.model_dump(exclude_none=True))
@@ -55,7 +55,7 @@ async def update_campaign_endpoint(campaign_id: str, updated_campaign: CampaignU
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{campaign_id}")
+@router.delete("/delete_campaign/{campaign_id}")
 async def delete_campaign_endpoint(campaign_id: str):
     try:
         await delete_campaign(campaign_id)

@@ -16,13 +16,13 @@ async function authFetch(input: string, init: RequestInit = {}): Promise<Respons
 // ── Campaigns ────────────────────────────────────────────────────────────────
 
 export async function listCampaigns(): Promise<Campaign[]> {
-  const res = await authFetch('/campaigns/');
+  const res = await authFetch('/campaigns/list_campaigns');
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 export async function createCampaign(data: CampaignCreate): Promise<Campaign> {
-  const res = await authFetch('/campaigns/', {
+  const res = await authFetch('/campaigns/create_campaign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -32,7 +32,7 @@ export async function createCampaign(data: CampaignCreate): Promise<Campaign> {
 }
 
 export async function deleteCampaign(id: string): Promise<void> {
-  const res = await authFetch(`/campaigns/${id}`, { method: 'DELETE' });
+  const res = await authFetch(`/campaigns/delete_campaign/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(await res.text());
 }
 
