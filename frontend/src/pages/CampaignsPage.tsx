@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listCampaigns, createCampaign, deleteCampaign } from '../api';
-import type { Campaign, CampaignCreate } from '../types';
+import { listCampaigns, createCampaign, deleteCampaign, listKnowledgeBases } from '../api';
+import type { Campaign, CampaignCreate, KnowledgeBase } from '../types';
 
 const blank: CampaignCreate = {
   campaign_name: '',
@@ -16,6 +16,7 @@ const blank: CampaignCreate = {
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [collections, setCollections] = useState<KnowledgeBase[]>([]);
   const [form, setForm] = useState<CampaignCreate>(blank);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
@@ -23,7 +24,10 @@ export default function CampaignsPage() {
 
   const load = () => listCampaigns().then(setCampaigns).catch((e) => setError(e.message));
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    listKnowledgeBases().then(setCollections).catch(() => {});
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -72,7 +76,14 @@ export default function CampaignsPage() {
           <label>End Date<input type="datetime-local" required value={form.end_date} onChange={set('end_date')} /></label>
           <label>Target Audience<input required value={form.target_audience} onChange={set('target_audience')} /></label>
           <label># Questions<input type="number" min={1} required value={form.number_of_questions} onChange={set('number_of_questions')} /></label>
-          <label className="span2">Collection ID<input required value={form.collection_id} onChange={set('collection_id')} /></label>
+          <label className="span2">Knowledge Base
+            <select required value={form.collection_id} onChange={(e) => setForm((f) => ({ ...f, collection_id: e.target.value }))}>
+              <option value="">— select a collection —</option>
+              {collections.map((c) => (
+                <option key={c.collection_id} value={c.collection_id}>{c.collection_name}</option>
+              ))}
+            </select>
+          </label>
           <button type="submit" disabled={loading} className="span2">{loading ? 'Creating…' : 'Create Campaign'}</button>
         </form>
       )}

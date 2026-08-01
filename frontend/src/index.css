@@ -68,7 +68,7 @@ main { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
 }
 .form-grid .span2 { grid-column: span 2; }
 label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 500; color: var(--muted); }
-input, textarea {
+input, textarea, select {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
