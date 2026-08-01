@@ -65,7 +65,16 @@ async def create_documents_collection(qdrant: QdrantClient, collection_name: str
     }
     result = await db[KNOWLEDGEBASE_COLLECTION].insert_one(upload_entry)
     create_collection(qdrant, result.inserted_id)
-    return {"inserted_id": result.inserted_id}
+    return {"inserted_id": str(result.inserted_id)}
+
+
+async def list_knowledgebases() -> list:
+    db = await get_mongodb()
+    cursor = db[KNOWLEDGEBASE_COLLECTION].find()
+    collections = await cursor.to_list(length=100)
+    for c in collections:
+        c["collection_id"] = str(c.pop("_id"))
+    return collections
 
 
 async def delete_documents_collection(qdrant: QdrantClient, collection_id: str) -> dict:

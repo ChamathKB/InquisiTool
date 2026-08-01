@@ -7,11 +7,26 @@ from inquisitool.constants import UPLOAD_DIR
 from inquisitool.db.mongodb import (
     create_documents_collection,
     delete_documents_collection,
+    list_knowledgebases,
     upload_document,
 )
+from inquisitool.models.knowledgebase import KnowledgebaseCollectionResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+@router.get(
+    "/",
+    response_model=list[KnowledgebaseCollectionResponse],
+    summary="List all knowledge base collections",
+)
+async def list_collections() -> list:
+    try:
+        return await list_knowledgebases()
+    except Exception as e:
+        logger.error("Failed to list collections: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post(
@@ -24,7 +39,7 @@ logger = logging.getLogger(__name__)
 async def create_collection(request: Request, collection_name: str) -> dict:
     result = await create_documents_collection(request.app.state.qdrant, collection_name)
     logger.info("Collection created: %s (id=%s)", collection_name, result["inserted_id"])
-    return {"message": f"{collection_name} collection created successfully with collection id {result['inserted_id']}!"}
+    return {"message": f"{collection_name} collection created successfully!", "collection_id": result["inserted_id"]}
 
 
 @router.post(
