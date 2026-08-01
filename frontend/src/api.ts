@@ -1,5 +1,5 @@
 import keycloak from './keycloak';
-import type { Campaign, CampaignCreate, SurveyRequest, SurveyResponse } from './types';
+import type { Campaign, CampaignCreate, KnowledgeBase, SurveyRequest, SurveyResponse } from './types';
 
 async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
   // Refresh token if it expires within 30 s
@@ -38,7 +38,13 @@ export async function deleteCampaign(id: string): Promise<void> {
 
 // ── Knowledge bases ───────────────────────────────────────────────────────────
 
-export async function createCollection(name: string): Promise<{ message: string }> {
+export async function listKnowledgeBases(): Promise<KnowledgeBase[]> {
+  const res = await authFetch('/knowledgebases/');
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function createCollection(name: string): Promise<{ message: string; collection_id: string }> {
   const res = await authFetch(`/knowledgebases/create_collection?collection_name=${encodeURIComponent(name)}`, {
     method: 'POST',
   });

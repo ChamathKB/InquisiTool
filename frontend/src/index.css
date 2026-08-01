@@ -205,3 +205,12 @@ a.btn-primary:hover { background: var(--primary-hover); }
   user-select: all;
 }
 .collection-id:hover { background: #e0e7ff; border-color: var(--primary); }
+
+/* ── Upload row inside collection card ── */
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.upload-row input[type="file"] { flex: 1; padding: 4px; }

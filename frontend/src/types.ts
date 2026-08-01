@@ -1,3 +1,9 @@
+export interface KnowledgeBase {
+  collection_id: string;
+  collection_name: string;
+  uploaded_at: string;
+}
+
 export interface Campaign {
   campaign_id: string;
   campaign_name: string;

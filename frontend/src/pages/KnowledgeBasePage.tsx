@@ -1,64 +1,59 @@
-import { useState } from 'react';
-import { createCollection, uploadDocs, deleteCollection } from '../api';
+import { useEffect, useState } from 'react';
+import { listKnowledgeBases, createCollection, uploadDocs, deleteCollection } from '../api';
+import type { KnowledgeBase } from '../types';
 
 export default function KnowledgeBasePage() {
+  const [collections, setCollections] = useState<KnowledgeBase[]>([]);
+  const [showForm, setShowForm] = useState(false);
   const [collectionName, setCollectionName] = useState('');
-  const [collectionMsg, setCollectionMsg] = useState('');
-  const [lastCollectionId, setLastCollectionId] = useState('');
-
-  const [file, setFile] = useState<File | null>(null);
-  const [uploadCollectionId, setUploadCollectionId] = useState('');
-  const [uploadMsg, setUploadMsg] = useState('');
-  const [uploading, setUploading] = useState(false);
-
-  const [deleteId, setDeleteId] = useState('');
-  const [deleteMsg, setDeleteMsg] = useState('');
-
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  async function handleCreateCollection(e: React.FormEvent) {
+  // upload state per collection
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+
+  const load = () => listKnowledgeBases().then(setCollections).catch((e) => setError(e.message));
+
+  useEffect(() => { load(); }, []);
+
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    setLoading(true);
     setError('');
-    setCollectionMsg('');
     try {
-      const res = await createCollection(collectionName);
-      setCollectionMsg(res.message);
-      // extract the id from the message: "... collection id <id>!"
-      const match = res.message.match(/collection id ([a-f0-9]+)/i);
-      if (match) setLastCollectionId(match[1]);
+      await createCollection(collectionName);
       setCollectionName('');
-    } catch (e: any) {
-      setError(e.message);
-    }
-  }
-
-  async function handleUpload(e: React.FormEvent) {
-    e.preventDefault();
-    if (!file) return;
-    setError('');
-    setUploadMsg('');
-    setUploading(true);
-    try {
-      const res = await uploadDocs(file, uploadCollectionId);
-      setUploadMsg(res.message);
-      setFile(null);
-      setUploadCollectionId('');
+      setShowForm(false);
+      await load();
     } catch (e: any) {
       setError(e.message);
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   }
 
-  async function handleDelete(e: React.FormEvent) {
+  async function handleUpload(e: React.FormEvent, collectionId: string) {
     e.preventDefault();
-    if (!confirm(`Delete collection "${deleteId}"?`)) return;
+    if (!uploadFile) return;
     setError('');
-    setDeleteMsg('');
+    setUploadingId(collectionId);
     try {
-      const res = await deleteCollection(deleteId);
-      setDeleteMsg(res.message);
-      setDeleteId('');
+      await uploadDocs(uploadFile, collectionId);
+      setUploadFile(null);
+      setUploadingId(null);
+    } catch (e: any) {
+      setError(e.message);
+      setUploadingId(null);
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete collection "${name}"?`)) return;
+    setError('');
+    try {
+      await deleteCollection(id);
+      await load();
     } catch (e: any) {
       setError(e.message);
     }
@@ -66,78 +61,54 @@ export default function KnowledgeBasePage() {
 
   return (
     <div className="page">
-      <div className="page-header"><h1>Knowledge Bases</h1></div>
+      <div className="page-header">
+        <h1>Knowledge Bases</h1>
+        <button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Cancel' : '+ New Collection'}</button>
+      </div>
+
       {error && <p className="error">{error}</p>}
 
-      <div className="card-list">
-        <div className="card">
-          <h2>Create Collection</h2>
-          <form onSubmit={handleCreateCollection} className="inline-form">
-            <input
-              required
-              placeholder="Collection name"
-              value={collectionName}
-              onChange={(e) => setCollectionName(e.target.value)}
-            />
-            <button type="submit">Create</button>
-          </form>
-          {collectionMsg && <p className="success">{collectionMsg}</p>}
-          {lastCollectionId && (
-            <div className="collection-id-box">
-              <span>Collection ID:</span>
-              <code
-                className="collection-id"
-                title="Click to copy"
-                onClick={() => navigator.clipboard.writeText(lastCollectionId)}
-              >
-                {lastCollectionId}
-              </code>
-              <span className="muted">(click to copy)</span>
-            </div>
-          )}
-        </div>
+      {showForm && (
+        <form className="card inline-form" onSubmit={handleCreate}>
+          <input
+            required
+            placeholder="Collection name"
+            value={collectionName}
+            onChange={(e) => setCollectionName(e.target.value)}
+          />
+          <button type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create'}</button>
+        </form>
+      )}
 
-        <div className="card">
-          <h2>Upload Documents</h2>
-          <form onSubmit={handleUpload} className="form-grid">
-            <label className="span2">
-              PDF File
+      <div className="card-list">
+        {collections.map((c) => (
+          <div key={c.collection_id} className="card campaign-card">
+            <div>
+              <strong>{c.collection_name}</strong>
+            </div>
+            <small className="muted">
+              ID: <code className="collection-id" title="Click to copy" onClick={() => navigator.clipboard.writeText(c.collection_id)}>{c.collection_id}</code>
+              &nbsp;· Created: {new Date(c.uploaded_at).toLocaleDateString()}
+            </small>
+
+            <form className="upload-row" onSubmit={(e) => handleUpload(e, c.collection_id)}>
               <input
                 type="file"
                 accept=".pdf"
                 required
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
               />
-            </label>
-            <label className="span2">
-              Collection ID
-              <input
-                required
-                placeholder="e.g. 507f1f77bcf86cd799439011"
-                value={uploadCollectionId}
-                onChange={(e) => setUploadCollectionId(e.target.value)}
-              />
-            </label>
-            <button type="submit" disabled={uploading} className="span2">
-              {uploading ? 'Uploading…' : 'Upload'}
-            </button>
-          </form>
-          {uploadMsg && <p className="success">{uploadMsg}</p>}
-        </div>
+              <button type="submit" disabled={uploadingId === c.collection_id}>
+                {uploadingId === c.collection_id ? 'Uploading…' : 'Upload PDF'}
+              </button>
+            </form>
 
-        <div className="card">
-          <h2>Delete Collection</h2>
-          <form onSubmit={handleDelete} className="inline-form">
-            <input
-              required
-              placeholder="Collection ID"
-              value={deleteId}
-              onChange={(e) => setDeleteId(e.target.value)}
-            />
-            <button type="submit" className="btn-danger">Delete</button>
-          </form>
-          {deleteMsg && <p className="success">{deleteMsg}</p>}
-        </div>
+            <div className="card-actions">
+              <button className="btn-danger" onClick={() => handleDelete(c.collection_id, c.collection_name)}>Delete</button>
+            </div>
+          </div>
+        ))}
+        {collections.length === 0 && <p className="muted">No collections yet.</p>}
       </div>
     </div>
   );
