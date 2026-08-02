@@ -1,9 +1,9 @@
 services:
   app:
     container_name: inquisitool-app
-    build: .
-    ports:
-      - "8000:8000"
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     env_file:
       - .env
     environment:
@@ -16,6 +16,16 @@ services:
       - qdrant
     volumes:
       - ./upload:/app/upload
+
+  frontend:
+    container_name: inquisitool-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - app
 
   mongodb:
     container_name: inquisitool-mongodb
