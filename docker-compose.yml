@@ -1,21 +1,36 @@
 services:
   app:
     container_name: inquisitool-app
-    build: .
-    ports:
-      - "8000:8000"
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     env_file:
       - .env
     environment:
       - MONGO_URL=mongodb://mongodb:27017
       - REDIS_URL=redis://redis:6379
       - QDRANT_URL=http://qdrant:6333
+      - KEYCLOAK_URL=http://keycloak:8080
     depends_on:
       - mongodb
       - redis
       - qdrant
     volumes:
       - ./upload:/app/upload
+
+  frontend:
+    container_name: inquisitool-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-http://localhost:8080}
+        VITE_KEYCLOAK_REALM: ${VITE_KEYCLOAK_REALM:-inquisitool}
+        VITE_KEYCLOAK_CLIENT_ID: ${VITE_KEYCLOAK_CLIENT_ID:-inquisitool-frontend}
+    ports:
+      - "80:80"
+    depends_on:
+      - app
 
   mongodb:
     container_name: inquisitool-mongodb

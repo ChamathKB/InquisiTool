@@ -7,31 +7,48 @@ from inquisitool.constants import UPLOAD_DIR
 from inquisitool.db.mongodb import (
     create_documents_collection,
     delete_documents_collection,
+    list_knowledgebases,
     upload_document,
 )
+from inquisitool.models.knowledgebase import KnowledgebaseCollectionResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/create_collection", response_model=dict)
+@router.get(
+    "/",
+    response_model=list[KnowledgebaseCollectionResponse],
+    summary="List all knowledge base collections",
+)
+async def list_collections() -> list:
+    try:
+        return await list_knowledgebases()
+    except Exception as e:
+        logger.error("Failed to list collections: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/create_collection",
+    response_model=dict,
+    summary="Create a knowledge base collection",
+    description="Creates a new Qdrant vector collection to store document embeddings for a knowledge base.",
+    responses={500: {"description": "Internal server error"}},
+)
 async def create_collection(request: Request, collection_name: str) -> dict:
-    """
-    Creates a new Qdrant collection.
-
-    Args:
-        collection_name (str): The name of the collection to create.
-
-    Returns:
-        dict: A dictionary containing a success message.
-    """
-
     result = await create_documents_collection(request.app.state.qdrant, collection_name)
     logger.info("Collection created: %s (id=%s)", collection_name, result["inserted_id"])
-    return {"message": f"{collection_name} collection created successfully with collection id {result['inserted_id']}!"}
+    return {"message": f"{collection_name} collection created successfully!", "collection_id": result["inserted_id"]}
 
 
-@router.post("/upload_docs", response_model=dict)
+@router.post(
+    "/upload_docs",
+    response_model=dict,
+    summary="Upload documents to a collection",
+    description="Uploads a PDF file, chunks, generates embeddings, and stores in the specified Qdrant collection.",
+    responses={500: {"description": "Document upload failed"}},
+)
 async def upload_docs(
     request: Request,
     file: UploadFile = File(...),
@@ -39,19 +56,6 @@ async def upload_docs(
     chunk_size: int = Form(1000),
     chunk_overlap: int = Form(50),
 ) -> dict:
-    """
-    Uploads preprocessed data with embeddings to a Qdrant collection.
-
-    Args:
-        file (UploadFile): The uploaded file containing data.
-        collection_name (str): The name of the Qdrant collection to upload the data to.
-        chunk_size (int): The size of chunks to break the data into.
-        chunk_overlap (int): The overlap between chunks.
-
-    Returns:
-        dict: A dictionary containing the upload status message.
-    """
-
     filename = file.filename
     content = await file.read()
     qdrant = request.app.state.qdrant
@@ -78,7 +82,13 @@ async def upload_docs(
         raise HTTPException(status_code=500, detail=f"Document upload failed: {str(e)}")
 
 
-@router.delete("/delete_collection", response_model=dict)
+@router.delete(
+    "/delete_collection",
+    response_model=dict,
+    summary="Delete a knowledge base collection",
+    description="Deletes a Qdrant vector collection and all its associated documents by collection ID.",
+    responses={500: {"description": "Internal server error"}},
+)
 async def collection_delete(request: Request, collection_id: str) -> dict:
     """
     Deletes a Qdrant collection and its associated documents.
