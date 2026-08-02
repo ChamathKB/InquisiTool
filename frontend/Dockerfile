@@ -7,6 +7,11 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+
+ARG VITE_KEYCLOAK_URL
+ARG VITE_KEYCLOAK_REALM
+ARG VITE_KEYCLOAK_CLIENT_ID
+
 RUN npm run build
 
 # Runtime stage
