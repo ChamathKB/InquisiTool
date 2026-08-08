@@ -96,6 +96,15 @@ async def upload_document(file_path: str, qdrant: QdrantClient, collection_id: s
     return {"inserted_id": result.inserted_id}
 
 
+async def get_campaign_by_api_key(api_key: str) -> dict:
+    db = await get_mongodb()
+    campaign = await db[CAMPAIGNS_COLLECTION].find_one({"api_key": api_key})
+    if campaign is None:
+        raise ValueError("Invalid API key")
+    campaign["_id"] = str(campaign["_id"])
+    return campaign
+
+
 # campaigns
 async def create_campaign(campaign_data: dict) -> dict:
     db = await get_mongodb()

@@ -38,3 +38,4 @@ class CampaignResponse(BaseModel):
     collection_id: str
     created_at: datetime
     updated_at: datetime
+    api_key: str | None = None
