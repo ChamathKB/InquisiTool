@@ -99,6 +99,8 @@ button:hover:not(:disabled) { background: var(--primary-hover); }
 button:disabled { opacity: .5; cursor: not-allowed; }
 .btn-danger { background: var(--danger); }
 .btn-danger:hover:not(:disabled) { background: var(--danger-hover); }
+.btn-secondary { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+.btn-secondary:hover:not(:disabled) { background: var(--primary); color: #fff; }
 .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
 .btn-ghost:hover { background: var(--bg); }
 a.btn-primary {
