@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listCampaigns, createCampaign, deleteCampaign, listKnowledgeBases } from '../api';
+import { listCampaigns, createCampaign, deleteCampaign, listKnowledgeBases, generateApiKey } from '../api';
 import type { Campaign, CampaignCreate, KnowledgeBase } from '../types';
 
 const blank: CampaignCreate = {
@@ -21,6 +21,7 @@ export default function CampaignsPage() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const load = () => listCampaigns().then(setCampaigns).catch((e) => setError(e.message));
 
@@ -50,6 +51,23 @@ export default function CampaignsPage() {
     try {
       await deleteCampaign(id);
       await load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
+
+  async function handleCopyWidget(c: Campaign) {
+    try {
+      let key = c.api_key;
+      if (!key) {
+        const updated = await generateApiKey(c.campaign_id);
+        key = updated.api_key!;
+        setCampaigns((prev) => prev.map((x) => x.campaign_id === c.campaign_id ? { ...x, api_key: key } : x));
+      }
+      const snippet = `<script\n  src="${window.location.origin}/static/widget.iife.js"\n  data-api-url="${window.location.origin}"\n  data-campaign-id="${c.campaign_id}"\n  data-api-key="${key}"\n><\/script>`;
+      await navigator.clipboard.writeText(snippet);
+      setCopied(c.campaign_id);
+      setTimeout(() => setCopied(null), 2000);
     } catch (e: any) {
       setError(e.message);
     }
@@ -99,6 +117,9 @@ export default function CampaignsPage() {
             <small>Audience: {c.target_audience} · {c.number_of_questions} questions</small>
             <div className="card-actions">
               <Link to={`/survey/${c.campaign_id}`} className="btn-primary">Take Survey</Link>
+              <button onClick={() => handleCopyWidget(c)} className="btn-secondary">
+                {copied === c.campaign_id ? '✓ Copied!' : 'Copy Widget'}
+              </button>
               <button className="btn-danger" onClick={() => handleDelete(c.campaign_id)}>Delete</button>
             </div>
           </div>

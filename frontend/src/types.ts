@@ -5,6 +5,7 @@ export interface KnowledgeBase {
 }
 
 export interface Campaign {
+  api_key?: string | null;
   campaign_id: string;
   campaign_name: string;
   campaign_description: string;

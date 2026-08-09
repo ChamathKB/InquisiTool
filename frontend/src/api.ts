@@ -36,6 +36,12 @@ export async function deleteCampaign(id: string): Promise<void> {
   if (!res.ok) throw new Error(await res.text());
 }
 
+export async function generateApiKey(id: string): Promise<Campaign> {
+  const res = await authFetch(`/campaigns/${id}/generate_key`, { method: 'POST' });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 // ── Knowledge bases ───────────────────────────────────────────────────────────
 
 export async function listKnowledgeBases(): Promise<KnowledgeBase[]> {

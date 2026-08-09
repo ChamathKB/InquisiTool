@@ -1,11 +1,14 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import aiohttp
 import click
 import redis.asyncio as redis
 import uvicorn
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from qdrant_client import QdrantClient
 from slowapi import _rate_limit_exceeded_handler
@@ -14,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from inquisitool.auth import limiter, require_auth
 from inquisitool.constants import LOG_LEVELS, QDRANT_URL, REDIS_URL
 from inquisitool.db.mongodb import mongodb
-from inquisitool.routes import campaigns, knowledgebases, query
+from inquisitool.routes import campaigns, knowledgebases, public, query
 
 
 def create_app():
@@ -35,12 +38,24 @@ def create_app():
         await app.state.mongodb.close()
         await app.state.session.close()
 
-    app = FastAPI(lifespan=lifespan, dependencies=[Depends(require_auth)])
+    app = FastAPI(lifespan=lifespan)
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-    app.include_router(campaigns.router, prefix="/campaigns")
-    app.include_router(knowledgebases.router, prefix="/knowledgebases")
-    app.include_router(query.router, prefix="/query")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["POST"],
+        allow_headers=["X-API-Key", "Content-Type"],
+    )
+    app.include_router(campaigns.router, prefix="/campaigns", dependencies=[Depends(require_auth)])
+    app.include_router(knowledgebases.router, prefix="/knowledgebases", dependencies=[Depends(require_auth)])
+    app.include_router(query.router, prefix="/query", dependencies=[Depends(require_auth)])
+    app.include_router(public.router, prefix="/public")
+
+    static_dir = Path(__file__).parent / "static"
+    static_dir.mkdir(exist_ok=True)
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
     return app
 
 

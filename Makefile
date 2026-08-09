@@ -1,4 +1,4 @@
-.PHONY: help install dev-install clean run test lint format services-start services-stop docker-up docker-down
+.PHONY: help install dev-install clean run test lint format services-start services-stop docker-up docker-down frontend-dev frontend-build widget-build
 
 help:
 	@echo "InquisiTool Makefile Commands:"
@@ -13,6 +13,9 @@ help:
 	@echo "  make services-stop  - Stop all services"
 	@echo "  make docker-up      - Start with Docker Compose"
 	@echo "  make docker-down    - Stop Docker Compose"
+	@echo "  make frontend-dev   - Run frontend dev server"
+	@echo "  make frontend-build - Build frontend for production"
+	@echo "  make widget-build   - Build embeddable survey widget"
 
 install:
 	pip install -e .
@@ -62,3 +65,12 @@ docker-up:
 
 docker-down:
 	docker-compose down
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-build:
+	cd frontend && npm run build
+
+widget-build:
+	cd widget && npm install && npm run build

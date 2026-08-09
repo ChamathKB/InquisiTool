@@ -131,3 +131,4 @@ All endpoints require `Authorization: Bearer <token>`.
 - [Keycloak Auth](docs/Keycloak_Auth.md) — auth setup, realm/client config, production checklist
 - [Rate Limits](docs/Rate_Limits.md) — current limits, how to add more, switching to user-based limiting
 - [Redis Usage](docs/Redis_Usage.md) — caching strategy and monitoring
+- [Widget](docs/Widget.md) — embeddable survey widget, API key generation, embed snippet

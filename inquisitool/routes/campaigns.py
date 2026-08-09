@@ -1,4 +1,5 @@
 import logging
+import secrets
 from typing import List
 
 from fastapi import APIRouter, HTTPException
@@ -93,4 +94,24 @@ async def delete_campaign_endpoint(campaign_id: str):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error("Failed to delete campaign %s: %s", campaign_id, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/{campaign_id}/generate_key",
+    response_model=CampaignResponse,
+    summary="Generate a widget API key",
+    description="Generates (or regenerates) a shareable API key for the campaign widget.",
+    responses={404: {"description": "Campaign not found"}, 500: {"description": "Internal server error"}},
+)
+async def generate_api_key(campaign_id: str):
+    try:
+        api_key = secrets.token_urlsafe(32)
+        await update_campaign(campaign_id, {"api_key": api_key})
+        logger.info("API key generated for campaign: %s", campaign_id)
+        return await get_campaign(campaign_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to generate API key for campaign %s: %s", campaign_id, e)
         raise HTTPException(status_code=500, detail=str(e))
