@@ -38,7 +38,7 @@ def create_app():
         await app.state.mongodb.close()
         await app.state.session.close()
 
-    app = FastAPI(lifespan=lifespan, dependencies=[Depends(require_auth)])
+    app = FastAPI(lifespan=lifespan)
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(
@@ -47,10 +47,10 @@ def create_app():
         allow_methods=["POST"],
         allow_headers=["X-API-Key", "Content-Type"],
     )
-    app.include_router(campaigns.router, prefix="/campaigns")
-    app.include_router(knowledgebases.router, prefix="/knowledgebases")
-    app.include_router(query.router, prefix="/query")
-    app.include_router(public.router, prefix="/public", dependencies=[])
+    app.include_router(campaigns.router, prefix="/campaigns", dependencies=[Depends(require_auth)])
+    app.include_router(knowledgebases.router, prefix="/knowledgebases", dependencies=[Depends(require_auth)])
+    app.include_router(query.router, prefix="/query", dependencies=[Depends(require_auth)])
+    app.include_router(public.router, prefix="/public")
 
     static_dir = Path(__file__).parent / "static"
     static_dir.mkdir(exist_ok=True)
