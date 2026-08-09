@@ -51,6 +51,7 @@
 
   let sessionId = null;
   let surveyEnded = false;
+  let starting = false;
 
   function injectStyles() {
     const el = document.createElement("style");
@@ -81,7 +82,7 @@
 
     btn.addEventListener("click", () => {
       const hidden = popup.classList.toggle("iq-hidden");
-      if (!hidden && !sessionId && !surveyEnded) startSurvey();
+      if (!hidden && !sessionId && !surveyEnded && !starting) startSurvey();
     });
 
     document.getElementById("iq-widget-send").addEventListener("click", sendAnswer);
@@ -118,6 +119,8 @@
   }
 
   async function startSurvey() {
+    if (starting || sessionId) return;
+    starting = true;
     setLoading(true);
     try {
       const data = await callSurvey(null);
@@ -127,12 +130,13 @@
     } catch (e) {
       appendMessage("Failed to start survey. Please try again.", "bot");
     } finally {
+      starting = false;
       setLoading(false);
     }
   }
 
   async function sendAnswer() {
-    if (surveyEnded) return;
+    if (surveyEnded || !sessionId) return;
     const input = document.getElementById("iq-widget-input");
     const answer = input.value.trim();
     if (!answer) return;
