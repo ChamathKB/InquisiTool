@@ -44,7 +44,7 @@ def create_app():
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_methods=["POST"],
+        allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["X-API-Key", "Content-Type"],
     )
     app.include_router(campaigns.router, prefix="/campaigns", dependencies=[Depends(require_auth)])
