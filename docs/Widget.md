@@ -4,7 +4,7 @@ A lightweight vanilla JS widget that can be embedded in any HTML page to run a c
 
 ## How It Works
 
-1. Generate a campaign API key via the authenticated API
+1. Generate a campaign API key — via the UI or the API
 2. Build the widget bundle
 3. Drop a `<script>` tag into any HTML page
 
@@ -19,6 +19,18 @@ make widget-build
 This compiles `widget/src/widget.js` and outputs `inquisitool/static/widget.iife.js`, which is served by FastAPI at `/static/widget.iife.js`.
 
 ## Generating a Campaign API Key
+
+### From the UI (recommended)
+
+On the Campaigns page, click **Copy Widget** beside any campaign. This will:
+
+1. Generate an API key for that campaign if one doesn't exist yet (calls `POST /campaigns/{id}/generate_key` automatically)
+2. Copy the ready-to-use `<script>` embed snippet to your clipboard
+3. Show **✓ Copied!** for 2 seconds to confirm
+
+On subsequent clicks the key is reused — no extra API call is made.
+
+### Via the API
 
 Call the key generation endpoint with your Keycloak Bearer token:
 
