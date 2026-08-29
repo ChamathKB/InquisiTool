@@ -69,7 +69,7 @@ async def upload_docs(
         with open(file_path, "wb") as buffer:
             buffer.write(content)
 
-        await upload_document(file_path, qdrant, collection_id)
+        await upload_document(file_path, qdrant, collection_id, filename)
 
         os.remove(file_path)
         logger.info("Document uploaded successfully: %s", filename)
