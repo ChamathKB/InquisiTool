@@ -27,6 +27,14 @@ async def _resolve_campaign(api_key: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 
+def _check_origin(campaign: dict, origin: str | None) -> None:
+    allowed = campaign.get("allowed_origins", [])
+    if not allowed:
+        return
+    if not origin or origin not in allowed:
+        raise HTTPException(status_code=403, detail="Origin not allowed")
+
+
 @router.post(
     "/survey",
     response_model=SurveyResponse,
@@ -35,6 +43,7 @@ async def _resolve_campaign(api_key: str) -> dict:
 )
 async def public_survey(body: SurveyRequest, request: Request, x_api_key: str = Header(...)):
     campaign = await _resolve_campaign(x_api_key)
+    _check_origin(campaign, request.headers.get("origin"))
 
     # Override user_id — always anonymous
     body = body.model_copy(update={"user_id": ANONYMOUS_USER_ID})

@@ -12,6 +12,7 @@ const blank: CampaignCreate = {
   target_audience: '',
   number_of_questions: 5,
   collection_id: '',
+  allowed_origins: '',
 };
 
 export default function CampaignsPage() {
@@ -35,7 +36,13 @@ export default function CampaignsPage() {
     setLoading(true);
     setError('');
     try {
-      await createCampaign(form);
+      const payload = {
+        ...form,
+        allowed_origins: form.allowed_origins
+          ? form.allowed_origins.split('\n').map((o) => o.trim()).filter(Boolean)
+          : [],
+      };
+      await createCampaign(payload);
       setForm(blank);
       setShowForm(false);
       await load();
@@ -101,6 +108,9 @@ export default function CampaignsPage() {
                 <option key={c.collection_id} value={c.collection_id}>{c.collection_name}</option>
               ))}
             </select>
+          </label>
+          <label className="span2">Allowed Origins <span style={{fontWeight:400, color:'#6b7280'}}>(one per line — leave empty to allow all)</span>
+            <textarea value={form.allowed_origins} onChange={set('allowed_origins')} placeholder="https://example.com" />
           </label>
           <button type="submit" disabled={loading} className="span2">{loading ? 'Creating…' : 'Create Campaign'}</button>
         </form>
