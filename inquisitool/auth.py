@@ -17,15 +17,22 @@ limiter = Limiter(key_func=get_remote_address)
 _jwks_cache: dict = {}
 
 
+async def _fetch_jwks() -> dict:
+    url = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
+    logger.debug("Fetching JWKS from %s", url)
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+    _jwks_cache.clear()
+    _jwks_cache.update(data)
+    logger.info("JWKS fetched and cached (%d keys)", len(_jwks_cache.get("keys", [])))
+    return _jwks_cache
+
+
 async def _get_jwks() -> dict:
     if not _jwks_cache:
-        url = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
-        logger.debug("Fetching JWKS from %s", url)
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            _jwks_cache.update(resp.json())
-        logger.info("JWKS fetched and cached (%d keys)", len(_jwks_cache.get("keys", [])))
+        await _fetch_jwks()
     return _jwks_cache
 
 
@@ -34,9 +41,14 @@ async def require_auth(credentials: HTTPAuthorizationCredentials = Depends(beare
     try:
         jwks = await _get_jwks()
         header = jwt.get_unverified_header(token)
-        key = next((k for k in jwks["keys"] if k["kid"] == header["kid"]), None)
+        kid = header.get("kid")
+        key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
         if key is None:
-            logger.warning("Token rejected: unknown signing key kid=%s", header.get("kid"))
+            logger.info("Unknown kid=%s, refreshing JWKS cache", kid)
+            jwks = await _fetch_jwks()
+            key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
+        if key is None:
+            logger.warning("Token rejected: unknown signing key kid=%s", kid)
             raise HTTPException(status_code=401, detail="Unknown signing key")
         issuer = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}"
         payload = jwt.decode(token, key, algorithms=[header["alg"]], options={"verify_aud": False}, issuer=issuer)
