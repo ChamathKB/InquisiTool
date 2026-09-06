@@ -2,6 +2,43 @@
 
 Keycloak is used as the identity provider for all API endpoints. Every request must carry a valid Bearer token issued by Keycloak. Rate limiting is handled by `slowapi` on top of auth.
 
+## Auth Flow
+
+```bash
+┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+│   Browser   │         │  Keycloak   │         │   FastAPI   │
+└──────┬──────┘         └──────┬──────┘         └──────┬──────┘
+       │                       │                        │
+       │  1. Login redirect     │                        │
+       │──────────────────────>│                        │
+       │                       │                        │
+       │  2. Auth code (PKCE)  │                        │
+       │<──────────────────────│                        │
+       │                       │                        │
+       │  3. Exchange code     │                        │
+       │──────────────────────>│                        │
+       │                       │                        │
+       │  4. JWT access token  │                        │
+       │<──────────────────────│                        │
+       │                       │                        │
+       │  5. API request + JWT │                        │
+       │───────────────────────────────────────────────>│
+       │                       │                        │
+       │                       │  6. Fetch JWKS (once) │
+       │                       │<───────────────────────│
+       │                       │                        │
+       │                       │  7. JWKS public keys  │
+       │                       │───────────────────────>│
+       │                       │                        │
+       │                       │     8. Verify JWT      │
+       │                       │     signature locally  │
+       │                       │                        │
+       │  9. API response      │                        │
+       │<───────────────────────────────────────────────│
+```
+
+Steps 1–4 use the `inquisitool-frontend` public client (PKCE, no secret). Steps 6–7 only happen once — JWKS is cached in-process after the first request. All subsequent requests skip straight from step 5 to step 8.
+
 ## What Changed
 
 ### `docker-compose.yml`
@@ -37,11 +74,13 @@ KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "inquisitool")
 Core auth module with two responsibilities:
 
 **JWT verification (`require_auth`)**
+
 - Fetches Keycloak's public keys from the JWKS endpoint on first request, cached in-process
 - Validates the Bearer token: signature, issuer, `kid` match
 - Returns the decoded token payload (claims) as a dict
 
 **Rate limiter (`limiter`)**
+
 - `slowapi` `Limiter` instance keyed by remote IP
 - Imported by route files that need per-endpoint limits
 
@@ -77,7 +116,7 @@ async def process_survey(request: SurveyRequest, req: Request): ...
 Three new dependencies:
 
 | Package | Purpose |
-|---|---|
+| --- | --- |
 | `python-jose[cryptography]` | JWT decode and JWKS verification |
 | `slowapi` | Rate limiting for FastAPI |
 | `httpx` | Async HTTP client to fetch JWKS from Keycloak |

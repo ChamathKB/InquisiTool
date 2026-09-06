@@ -6,6 +6,7 @@ export interface KnowledgeBase {
 
 export interface Campaign {
   api_key?: string | null;
+  allowed_origins: string[];
   campaign_id: string;
   campaign_name: string;
   campaign_description: string;
@@ -28,6 +29,7 @@ export interface CampaignCreate {
   target_audience: string;
   number_of_questions: number;
   collection_id: string;
+  allowed_origins: string;
 }
 
 export interface SurveyRequest {

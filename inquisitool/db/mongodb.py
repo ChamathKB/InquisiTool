@@ -84,12 +84,12 @@ async def delete_documents_collection(qdrant: QdrantClient, collection_id: str) 
     return {"deleted_count": result.deleted_count}
 
 
-async def upload_document(file_path: str, qdrant: QdrantClient, collection_id: str) -> dict:
+async def upload_document(file_path: str, qdrant: QdrantClient, collection_id: str, filename: str) -> dict:
     db = await get_mongodb()
     load_pdf_to_qdrant(file_path, qdrant, collection_id)
     upload_entry = {
         "collection_id": collection_id,
-        "file_path": file_path,
+        "filename": filename,
         "uploaded_at": datetime.now(timezone.utc),
     }
     result = await db[DOCUMENT_COLLECTION].insert_one(upload_entry)

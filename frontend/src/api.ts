@@ -21,7 +21,7 @@ export async function listCampaigns(): Promise<Campaign[]> {
   return res.json();
 }
 
-export async function createCampaign(data: CampaignCreate): Promise<Campaign> {
+export async function createCampaign(data: Omit<CampaignCreate, 'allowed_origins'> & { allowed_origins: string[] }): Promise<Campaign> {
   const res = await authFetch('/campaigns/create_campaign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

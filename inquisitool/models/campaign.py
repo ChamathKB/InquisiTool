@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ class CampaignCreate(BaseModel):
     target_audience: str
     number_of_questions: int
     collection_id: str
+    allowed_origins: List[str] = []
 
 
 class CampaignUpdate(BaseModel):
@@ -24,6 +26,7 @@ class CampaignUpdate(BaseModel):
     target_audience: str | None = None
     number_of_questions: int | None = None
     collection_id: str | None = None
+    allowed_origins: List[str] | None = None
 
 
 class CampaignResponse(BaseModel):
@@ -39,3 +42,4 @@ class CampaignResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     api_key: str | None = None
+    allowed_origins: List[str] = []
