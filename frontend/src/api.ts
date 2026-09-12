@@ -1,5 +1,5 @@
 import keycloak from './keycloak';
-import type { Campaign, CampaignCreate, KnowledgeBase, SurveyRequest, SurveyResponse } from './types';
+import type { AnalysisReport, Campaign, CampaignCreate, KnowledgeBase, SurveyRequest, SurveyResponse } from './types';
 
 async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
   // Refresh token if it expires within 30 s
@@ -38,6 +38,18 @@ export async function deleteCampaign(id: string): Promise<void> {
 
 export async function generateApiKey(id: string): Promise<Campaign> {
   const res = await authFetch(`/campaigns/${id}/generate_key`, { method: 'POST' });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function analyzeCampaign(id: string): Promise<AnalysisReport> {
+  const res = await authFetch(`/campaigns/${id}/analyze`, { method: 'POST' });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getAnalysis(id: string): Promise<AnalysisReport> {
+  const res = await authFetch(`/campaigns/${id}/analysis`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
