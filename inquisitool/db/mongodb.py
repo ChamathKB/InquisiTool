@@ -6,6 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from qdrant_client import QdrantClient
 
 from inquisitool.constants import (
+    CAMPAIGN_ANALYSIS_COLLECTION,
     CAMPAIGN_INTERACTIONS_COLLECTION,
     CAMPAIGNS_COLLECTION,
     DOCUMENT_COLLECTION,
@@ -220,3 +221,23 @@ async def list_interactions(campaign_id: str, skip: int = 0, limit: int = 10) ->
     campaign_id = str(uuid.UUID(campaign_id))
     cursor = db[CAMPAIGN_INTERACTIONS_COLLECTION].find({"campaign_id": campaign_id}).skip(skip).limit(limit)
     return await cursor.to_list(length=limit)
+
+
+async def list_completed_interactions(campaign_id: str) -> list:
+    """List all completed (survey_ended=True) interactions for a campaign"""
+    db = await get_mongodb()
+    campaign_id = str(uuid.UUID(campaign_id))
+    cursor = db[CAMPAIGN_INTERACTIONS_COLLECTION].find({"campaign_id": campaign_id, "survey_ended": True})
+    return await cursor.to_list(length=None)
+
+
+async def save_analysis(campaign_id: str, report: dict) -> None:
+    db = await get_mongodb()
+    campaign_id = str(uuid.UUID(campaign_id))
+    await db[CAMPAIGN_ANALYSIS_COLLECTION].replace_one({"campaign_id": campaign_id}, report, upsert=True)
+
+
+async def get_analysis(campaign_id: str) -> dict | None:
+    db = await get_mongodb()
+    campaign_id = str(uuid.UUID(campaign_id))
+    return await db[CAMPAIGN_ANALYSIS_COLLECTION].find_one({"campaign_id": campaign_id}, {"_id": 0})
