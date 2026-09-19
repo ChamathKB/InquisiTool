@@ -32,6 +32,21 @@ export interface CampaignCreate {
   allowed_origins: string;
 }
 
+export interface QuestionSummary {
+  question: string;
+  summary: string;
+}
+
+export interface AnalysisReport {
+  campaign_id: string;
+  total_responses: number;
+  question_summaries: QuestionSummary[];
+  themes: string[];
+  sentiment: string;
+  insights: string[];
+  generated_at: string;
+}
+
 export interface SurveyRequest {
   user_id: string;
   session_id?: string | null;

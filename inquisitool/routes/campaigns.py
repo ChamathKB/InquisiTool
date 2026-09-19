@@ -1,16 +1,22 @@
 import logging
 import secrets
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, HTTPException
 
+from inquisitool.agents.analysis_crew import analyze_campaign
 from inquisitool.db.mongodb import (
     create_campaign,
     delete_campaign,
+    get_analysis,
     get_campaign,
     list_campaigns,
+    list_completed_interactions,
+    save_analysis,
     update_campaign,
 )
+from inquisitool.models.analysis import AnalysisReport
 from inquisitool.models.campaign import CampaignCreate, CampaignResponse, CampaignUpdate
 
 router = APIRouter()
@@ -114,4 +120,64 @@ async def generate_api_key(campaign_id: str):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error("Failed to generate API key for campaign %s: %s", campaign_id, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/{campaign_id}/analyze",
+    response_model=AnalysisReport,
+    summary="Analyze campaign responses",
+    description="Runs a CrewAI analysis over all completed survey sessions for the campaign and saves the report.",
+    responses={
+        404: {"description": "Campaign not found"},
+        422: {"description": "Not enough completed responses to analyze"},
+        500: {"description": "Internal server error"},
+    },
+)
+async def analyze_campaign_endpoint(campaign_id: str):
+    try:
+        campaign = await get_campaign(campaign_id)
+        interactions = await list_completed_interactions(campaign_id)
+        if not interactions:
+            raise HTTPException(status_code=422, detail="No completed survey responses found for this campaign.")
+        result = analyze_campaign(campaign, interactions)
+        report = {
+            "campaign_id": campaign_id,
+            "generated_at": datetime.now(timezone.utc),
+            **result,
+        }
+        await save_analysis(campaign_id, report)
+        logger.info("Analysis saved for campaign: %s", campaign_id)
+        return AnalysisReport(**report)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Analysis failed for campaign %s: %s", campaign_id, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/{campaign_id}/analysis",
+    response_model=AnalysisReport,
+    summary="Get campaign analysis report",
+    description="Returns the most recent analysis report for the campaign.",
+    responses={
+        404: {"description": "Campaign or analysis not found"},
+        500: {"description": "Internal server error"},
+    },
+)
+async def get_analysis_endpoint(campaign_id: str):
+    try:
+        report = await get_analysis(campaign_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail="No analysis found. Run POST /{campaign_id}/analyze first.")
+        return AnalysisReport(**report)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to get analysis for campaign %s: %s", campaign_id, e)
         raise HTTPException(status_code=500, detail=str(e))
