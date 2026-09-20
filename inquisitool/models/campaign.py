@@ -13,6 +13,7 @@ class CampaignCreate(BaseModel):
     status: str
     target_audience: str
     number_of_questions: int
+    branch_delta: int = 2
     collection_id: str
     allowed_origins: List[str] = []
 
@@ -25,6 +26,7 @@ class CampaignUpdate(BaseModel):
     status: str | None = None
     target_audience: str | None = None
     number_of_questions: int | None = None
+    branch_delta: int | None = None
     collection_id: str | None = None
     allowed_origins: List[str] | None = None
 
@@ -38,6 +40,7 @@ class CampaignResponse(BaseModel):
     status: str
     target_audience: str
     number_of_questions: int
+    branch_delta: int = 2
     collection_id: str
     created_at: datetime
     updated_at: datetime

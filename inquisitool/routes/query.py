@@ -2,7 +2,11 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from inquisitool.agents.agents import generate_closing_message, generate_question
+from inquisitool.agents.agents import (
+    generate_closing_message,
+    generate_question,
+    route_response,
+)
 from inquisitool.auth import limiter
 from inquisitool.db.mongodb import (
     create_interaction,
@@ -89,6 +93,7 @@ async def process_survey(body: SurveyRequest, request: Request):
         questions = interaction.get("questions", [])
         question_count = len(questions)
         question_limit = campaign.get("number_of_questions", 0)  # type: ignore
+        branch_delta = campaign.get("branch_delta", 2)  # type: ignore
 
         if question_count >= question_limit:
             closing_message = generate_closing_message(campaign)  # type: ignore
@@ -104,8 +109,27 @@ async def process_survey(body: SurveyRequest, request: Request):
                 survey_ended=True,
             )
 
+        questions_remaining = question_limit - question_count
+        routing = route_response(campaign, questions, answers, questions_remaining, branch_delta)  # type: ignore
+        logger.info("Router decision: session=%s routing=%s", session_id, routing)
+
+        if routing == "CLOSE":
+            closing_message = generate_closing_message(campaign)  # type: ignore
+            await update_interaction(session_id, {"answers": answers, "survey_ended": True})
+            await cache_delete(redis, interaction_key(session_id))  # type: ignore
+            await end_survey(session_id)
+            logger.info("Survey closed early by router: session=%s questions=%d", session_id, question_count)
+            return SurveyResponse(
+                session_id=session_id,
+                session_number=session_number,
+                question=closing_message,
+                question_count=question_count,
+                survey_ended=True,
+            )
+
+        branch_hint = routing.split(":", 1)[1].strip() if ":" in routing else ""
         question_turn = question_count + 1
-        question = generate_question(campaign, question_turn, answers)  # type: ignore
+        question = generate_question(campaign, question_turn, answers, branch_hint)  # type: ignore
         questions.append(question)
         updated = {"answers": answers, "questions": questions, "question_count": question_turn}
         await update_interaction(session_id, updated)
