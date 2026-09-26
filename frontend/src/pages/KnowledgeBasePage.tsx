@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react';
-import { listKnowledgeBases, createCollection, uploadDocs, deleteCollection } from '../api';
-import type { KnowledgeBase } from '../types';
+import { useEffect, useRef, useState } from 'react';
+import { listKnowledgeBases, createCollection, uploadDocs, deleteCollection, ragChat } from '../api';
+import type { KnowledgeBase, RAGMessage, RAGSource } from '../types';
+
+interface ChatEntry {
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: RAGSource[];
+}
 
 export default function KnowledgeBasePage() {
   const [collections, setCollections] = useState<KnowledgeBase[]>([]);
@@ -9,13 +15,23 @@ export default function KnowledgeBasePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // upload state per collection
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+
+  const [openChat, setOpenChat] = useState<string | null>(null);
+  const [chatHistories, setChatHistories] = useState<Record<string, ChatEntry[]>>({});
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const load = () => listKnowledgeBases().then(setCollections).catch((e) => setError(e.message));
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatHistories, openChat]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -53,10 +69,56 @@ export default function KnowledgeBasePage() {
     setError('');
     try {
       await deleteCollection(id);
+      if (openChat === id) setOpenChat(null);
       await load();
     } catch (e: any) {
       setError(e.message);
     }
+  }
+
+  function toggleChat(id: string) {
+    setOpenChat((prev) => (prev === id ? null : id));
+    setChatInput('');
+  }
+
+  async function handleChatSubmit(e: React.FormEvent, collectionId: string) {
+    e.preventDefault();
+    const question = chatInput.trim();
+    if (!question) return;
+
+    const prev = chatHistories[collectionId] ?? [];
+    const userEntry: ChatEntry = { role: 'user', content: question };
+    setChatHistories((h) => ({ ...h, [collectionId]: [...prev, userEntry] }));
+    setChatInput('');
+    setChatLoading(true);
+
+    try {
+      const history: RAGMessage[] = prev.map((m) => ({ role: m.role, content: m.content }));
+      const res = await ragChat(collectionId, question, history);
+      const assistantEntry: ChatEntry = {
+        role: 'assistant',
+        content: res.answer,
+        sources: res.sources,
+      };
+      setChatHistories((h) => ({
+        ...h,
+        [collectionId]: [...(h[collectionId] ?? []), assistantEntry],
+      }));
+    } catch (e: any) {
+      setChatHistories((h) => ({
+        ...h,
+        [collectionId]: [
+          ...(h[collectionId] ?? []),
+          { role: 'assistant', content: `Error: ${e.message}` },
+        ],
+      }));
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  function toggleSources(key: string) {
+    setExpandedSources((s) => ({ ...s, [key]: !s[key] }));
   }
 
   return (
@@ -104,8 +166,63 @@ export default function KnowledgeBasePage() {
             </form>
 
             <div className="card-actions">
+              <button className="btn-secondary" onClick={() => toggleChat(c.collection_id)}>
+                {openChat === c.collection_id ? 'Close Chat' : '💬 Chat'}
+              </button>
               <button className="btn-danger" onClick={() => handleDelete(c.collection_id, c.collection_name)}>Delete</button>
             </div>
+
+            {openChat === c.collection_id && (
+              <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ maxHeight: 360, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+                  {(chatHistories[c.collection_id] ?? []).length === 0 && (
+                    <p className="muted" style={{ fontSize: '0.85rem' }}>Ask anything about the documents in this collection.</p>
+                  )}
+                  {(chatHistories[c.collection_id] ?? []).map((entry, i) => (
+                    <div key={i}>
+                      <div className={`bubble ${entry.role === 'user' ? 'user' : 'agent'}`}>
+                        {entry.content}
+                      </div>
+                      {entry.role === 'assistant' && entry.sources && entry.sources.length > 0 && (
+                        <div style={{ marginTop: 4, paddingLeft: 4 }}>
+                          <button
+                            className="btn-ghost"
+                            style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                            onClick={() => toggleSources(`${c.collection_id}-${i}`)}
+                          >
+                            {expandedSources[`${c.collection_id}-${i}`] ? '▲ Hide sources' : `▼ ${entry.sources.length} source${entry.sources.length > 1 ? 's' : ''}`}
+                          </button>
+                          {expandedSources[`${c.collection_id}-${i}`] && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                              {entry.sources.map((s, si) => (
+                                <div key={si} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 10px' }}>
+                                  <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 2 }}>Source {si + 1} · score {s.score}</p>
+                                  <p style={{ fontSize: '0.82rem', whiteSpace: 'pre-wrap' }}>{s.text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="bubble agent typing">Thinking…</div>
+                  )}
+                  <div ref={chatBottomRef} />
+                </div>
+
+                <form className="chat-input" onSubmit={(e) => handleChatSubmit(e, c.collection_id)}>
+                  <input
+                    placeholder="Ask a question…"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    disabled={chatLoading}
+                  />
+                  <button type="submit" disabled={chatLoading || !chatInput.trim()}>Send</button>
+                </form>
+              </div>
+            )}
           </div>
         ))}
         {collections.length === 0 && <p className="muted">No collections yet.</p>}

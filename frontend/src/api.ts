@@ -1,5 +1,5 @@
 import keycloak from './keycloak';
-import type { AnalysisReport, Campaign, CampaignCreate, KnowledgeBase, SurveyRequest, SurveyResponse } from './types';
+import type { AnalysisReport, Campaign, CampaignCreate, KnowledgeBase, RAGMessage, RAGResponse, SurveyRequest, SurveyResponse } from './types';
 
 async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
   // Refresh token if it expires within 30 s
@@ -89,6 +89,20 @@ export async function uploadDocs(
 export async function deleteCollection(collectionId: string): Promise<{ message: string }> {
   const res = await authFetch(`/knowledgebases/delete_collection?collection_id=${encodeURIComponent(collectionId)}`, {
     method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function ragChat(
+  collection_id: string,
+  question: string,
+  history: RAGMessage[],
+): Promise<RAGResponse> {
+  const res = await authFetch('/knowledgebases/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ collection_id, question, history }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();

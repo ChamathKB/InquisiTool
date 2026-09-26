@@ -49,6 +49,21 @@ export interface AnalysisReport {
   generated_at: string;
 }
 
+export interface RAGMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface RAGSource {
+  text: string;
+  score: number;
+}
+
+export interface RAGResponse {
+  answer: string;
+  sources: RAGSource[];
+}
+
 export interface SurveyRequest {
   user_id: string;
   session_id?: string | null;
