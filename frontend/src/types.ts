@@ -15,6 +15,7 @@ export interface Campaign {
   status: string;
   target_audience: string;
   number_of_questions: number;
+  branch_delta: number;
   collection_id: string;
   created_at: string;
   updated_at: string;
@@ -28,6 +29,7 @@ export interface CampaignCreate {
   status: string;
   target_audience: string;
   number_of_questions: number;
+  branch_delta: number;
   collection_id: string;
   allowed_origins: string;
 }

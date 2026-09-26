@@ -11,6 +11,7 @@ const blank: CampaignCreate = {
   status: 'active',
   target_audience: '',
   number_of_questions: 5,
+  branch_delta: 2,
   collection_id: '',
   allowed_origins: '',
 };
@@ -140,6 +141,7 @@ export default function CampaignsPage() {
           <label>End Date<input type="datetime-local" required value={form.end_date} onChange={set('end_date')} /></label>
           <label>Target Audience<input required value={form.target_audience} onChange={set('target_audience')} /></label>
           <label># Questions<input type="number" min={1} required value={form.number_of_questions} onChange={set('number_of_questions')} /></label>
+          <label>Branch Delta <span style={{fontWeight:400, color:'#6b7280'}}>(early-close window)</span><input type="number" min={0} required value={form.branch_delta} onChange={set('branch_delta')} /></label>
           <label className="span2">Knowledge Base
             <select required value={form.collection_id} onChange={(e) => setForm((f) => ({ ...f, collection_id: e.target.value }))}>
               <option value="">— select a collection —</option>
@@ -163,7 +165,7 @@ export default function CampaignsPage() {
               <span className={`badge ${c.status}`}>{c.status}</span>
             </div>
             <p>{c.campaign_description}</p>
-            <small>Audience: {c.target_audience} · {c.number_of_questions} questions</small>
+            <small>Audience: {c.target_audience} · {c.number_of_questions} questions · delta {c.branch_delta}</small>
             <div className="card-actions">
               <Link to={`/survey/${c.campaign_id}`} className="btn-primary">Take Survey</Link>
               <button onClick={() => handleAnalyze(c.campaign_id)} className="btn-secondary" disabled={analysisLoading === c.campaign_id}>
