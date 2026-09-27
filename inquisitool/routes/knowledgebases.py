@@ -3,6 +3,8 @@ import os
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
+from inquisitool.agents.rag_agent import answer_question
+from inquisitool.auth import limiter
 from inquisitool.constants import UPLOAD_DIR
 from inquisitool.db.mongodb import (
     create_documents_collection,
@@ -11,6 +13,7 @@ from inquisitool.db.mongodb import (
     upload_document,
 )
 from inquisitool.models.knowledgebase import KnowledgebaseCollectionResponse
+from inquisitool.models.rag import RAGRequest, RAGResponse, RAGSource
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -111,3 +114,33 @@ async def collection_delete(request: Request, collection_id: str) -> dict:
     except Exception as e:
         logger.error("Collection deletion failed for %s: %s", collection_id, e)
         raise HTTPException(status_code=500, detail=f"Document deletion failed: {str(e)}")
+
+
+@router.post(
+    "/chat",
+    response_model=RAGResponse,
+    summary="Chat with a knowledge base",
+    description=(
+        "Ask a free-form question against a knowledge base collection. "
+        "Pass conversation history for multi-turn context. "
+        "The agent retrieves relevant chunks from Qdrant and returns a grounded answer with sources."
+    ),
+    responses={
+        404: {"description": "Collection not found"},
+        429: {"description": "Rate limit exceeded (30 requests/minute)"},
+        500: {"description": "Internal server error"},
+    },
+)
+@limiter.limit("30/minute")
+async def chat(body: RAGRequest, request: Request) -> RAGResponse:
+    try:
+        history = [m.model_dump() for m in body.history]
+        answer, sources = answer_question(body.collection_id, body.question, history)
+        logger.info("RAG chat: collection=%s question=%s", body.collection_id, body.question[:60])
+        return RAGResponse(
+            answer=answer,
+            sources=[RAGSource(**s) for s in sources],
+        )
+    except Exception as e:
+        logger.error("RAG chat failed: collection=%s error=%s", body.collection_id, e)
+        raise HTTPException(status_code=500, detail=str(e))
