@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listCampaigns, createCampaign, deleteCampaign, listKnowledgeBases, generateApiKey, analyzeCampaign, getAnalysis } from '../api';
-import type { Campaign, CampaignCreate, KnowledgeBase, AnalysisReport } from '../types';
+import { listCampaigns, createCampaign, deleteCampaign, listKnowledgeBases, generateApiKey, analyzeCampaign, getAnalysis, campaignAssist } from '../api';
+import type { Campaign, CampaignCreate, KnowledgeBase, AnalysisReport, DesignerMessage } from '../types';
 
 const blank: CampaignCreate = {
   campaign_name: '',
@@ -27,6 +27,13 @@ export default function CampaignsPage() {
   const [analysisMap, setAnalysisMap] = useState<Record<string, AnalysisReport>>({});
   const [analysisLoading, setAnalysisLoading] = useState<string | null>(null);
   const [openAnalysis, setOpenAnalysis] = useState<string | null>(null);
+
+  // assistant state
+  const [showAssist, setShowAssist] = useState(false);
+  const [assistHistory, setAssistHistory] = useState<DesignerMessage[]>([]);
+  const [assistInput, setAssistInput] = useState('');
+  const [assistLoading, setAssistLoading] = useState(false);
+  const assistScrollRef = useRef<HTMLDivElement>(null);
 
   const load = () => listCampaigns().then(setCampaigns).catch((e) => setError(e.message));
 
@@ -120,6 +127,55 @@ export default function CampaignsPage() {
     negative: '#ef4444',
   };
 
+  useEffect(() => {
+    if (assistScrollRef.current) {
+      assistScrollRef.current.scrollTop = assistScrollRef.current.scrollHeight;
+    }
+  }, [assistHistory]);
+
+  async function handleAssistSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const msg = assistInput.trim();
+    if (!msg) return;
+    const userMsg: DesignerMessage = { role: 'user', content: msg };
+    const nextHistory = [...assistHistory, userMsg];
+    setAssistHistory(nextHistory);
+    setAssistInput('');
+    setAssistLoading(true);
+    try {
+      const res = await campaignAssist(msg, assistHistory);
+      const assistantMsg: DesignerMessage = { role: 'assistant', content: res.message };
+      setAssistHistory([...nextHistory, assistantMsg]);
+      if (res.is_complete && res.config) {
+        const cfg = res.config;
+        setForm((f) => ({
+          ...f,
+          campaign_name: cfg.campaign_name,
+          campaign_description: cfg.campaign_description,
+          target_audience: cfg.target_audience,
+          number_of_questions: cfg.number_of_questions,
+          branch_delta: cfg.branch_delta,
+          status: cfg.status,
+          start_date: cfg.start_date.slice(0, 16),
+          end_date: cfg.end_date.slice(0, 16),
+        }));
+        setShowAssist(false);
+        setShowForm(true);
+        setAssistHistory([]);
+      }
+    } catch (e: any) {
+      setAssistHistory((h) => [...h, { role: 'assistant', content: `Error: ${e.message}` }]);
+    } finally {
+      setAssistLoading(false);
+    }
+  }
+
+  function handleAssistToggle() {
+    setShowAssist((v) => !v);
+    setAssistHistory([]);
+    setAssistInput('');
+  }
+
   const set = (k: keyof CampaignCreate) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.type === 'number' ? Number(e.target.value) : e.target.value }));
 
@@ -127,10 +183,39 @@ export default function CampaignsPage() {
     <div className="page">
       <div className="page-header">
         <h1>Campaigns</h1>
-        <button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Cancel' : '+ New Campaign'}</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-secondary" onClick={handleAssistToggle}>
+            {showAssist ? 'Cancel Assistant' : '✨ AI Assist'}
+          </button>
+          <button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Cancel' : '+ New Campaign'}</button>
+        </div>
       </div>
 
       {error && <p className="error">{error}</p>}
+
+      {showAssist && (
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--muted)' }}>CAMPAIGN ASSISTANT</p>
+          <div ref={assistScrollRef} style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+            {assistHistory.length === 0 && (
+              <p className="muted" style={{ fontSize: '0.85rem' }}>Describe your campaign goal and I'll help you set it up.</p>
+            )}
+            {assistHistory.map((m, i) => (
+              <div key={i} className={`bubble ${m.role === 'user' ? 'user' : 'agent'}`}>{m.content}</div>
+            ))}
+            {assistLoading && <div className="bubble agent typing">Thinking…</div>}
+          </div>
+          <form className="chat-input" onSubmit={handleAssistSubmit}>
+            <input
+              placeholder="e.g. I want to understand why enterprise customers churn…"
+              value={assistInput}
+              onChange={(e) => setAssistInput(e.target.value)}
+              disabled={assistLoading}
+            />
+            <button type="submit" disabled={assistLoading || !assistInput.trim()}>Send</button>
+          </form>
+        </div>
+      )}
 
       {showForm && (
         <form className="card form-grid" onSubmit={handleCreate}>

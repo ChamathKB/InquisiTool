@@ -34,6 +34,28 @@ export interface CampaignCreate {
   allowed_origins: string;
 }
 
+export interface DesignerMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface DesignerConfig {
+  campaign_name: string;
+  campaign_description: string;
+  target_audience: string;
+  number_of_questions: number;
+  branch_delta: number;
+  status: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface DesignerResponse {
+  message: string;
+  is_complete: boolean;
+  config?: DesignerConfig;
+}
+
 export interface QuestionSummary {
   question: string;
   summary: string;
