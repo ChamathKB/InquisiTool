@@ -6,6 +6,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 
 from inquisitool.agents.analysis_crew import analyze_campaign
+from inquisitool.agents.campaign_designer import chat_design
 from inquisitool.db.mongodb import (
     create_campaign,
     delete_campaign,
@@ -18,9 +19,38 @@ from inquisitool.db.mongodb import (
 )
 from inquisitool.models.analysis import AnalysisReport
 from inquisitool.models.campaign import CampaignCreate, CampaignResponse, CampaignUpdate
+from inquisitool.models.campaign_designer import (
+    DesignerConfig,
+    DesignerRequest,
+    DesignerResponse,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+@router.post(
+    "/assist",
+    response_model=DesignerResponse,
+    summary="Campaign creation assistant",
+    description=(
+        "Conversational assistant that gathers campaign requirements over 2-3 turns "
+        "and returns a ready-to-use campaign config when complete."
+    ),
+    responses={500: {"description": "Internal server error"}},
+)
+async def campaign_assist(body: DesignerRequest):
+    try:
+        history = [m.model_dump() for m in body.history]
+        reply, is_complete, config = chat_design(body.message, history)
+        return DesignerResponse(
+            message=reply,
+            is_complete=is_complete,
+            config=DesignerConfig(**config) if config else None,
+        )
+    except Exception as e:
+        logger.error("Campaign assist failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post(
