@@ -1,5 +1,5 @@
 import keycloak from './keycloak';
-import type { AnalysisReport, Campaign, CampaignCreate, KnowledgeBase, RAGMessage, RAGResponse, SurveyRequest, SurveyResponse } from './types';
+import type { AnalysisReport, Campaign, CampaignCreate, DesignerMessage, DesignerResponse, KnowledgeBase, RAGMessage, RAGResponse, SurveyRequest, SurveyResponse } from './types';
 
 async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
   // Refresh token if it expires within 30 s
@@ -50,6 +50,19 @@ export async function analyzeCampaign(id: string): Promise<AnalysisReport> {
 
 export async function getAnalysis(id: string): Promise<AnalysisReport> {
   const res = await authFetch(`/campaigns/${id}/analysis`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function campaignAssist(
+  message: string,
+  history: DesignerMessage[],
+): Promise<DesignerResponse> {
+  const res = await authFetch('/campaigns/assist', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, history }),
+  });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
