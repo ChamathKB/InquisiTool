@@ -16,7 +16,7 @@ def test_create_collection(mock_create, client):
     mock_create.return_value = {"inserted_id": "col-123"}
     response = client.post("/knowledgebases/create_collection?collection_name=test_col")
     assert response.status_code == 200
-    assert "col-123" in response.json()["message"]
+    assert response.json()["collection_id"] == "col-123"
 
 
 @patch("inquisitool.routes.knowledgebases.create_documents_collection", new_callable=AsyncMock)
