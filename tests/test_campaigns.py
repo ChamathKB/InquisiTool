@@ -31,7 +31,7 @@ def test_create_campaign(mock_get, mock_create, client):
             "collection_id",
         ]
     }
-    response = client.post("/campaigns/campaigns/", json=payload)
+    response = client.post("/campaigns/create_campaign", json=payload)
 
     assert response.status_code == 200
     assert response.json()["campaign_name"] == "Test Campaign"
@@ -40,7 +40,7 @@ def test_create_campaign(mock_get, mock_create, client):
 @patch("inquisitool.routes.campaigns.list_campaigns", new_callable=AsyncMock)
 def test_list_campaigns(mock_list, client):
     mock_list.return_value = [SAMPLE_CAMPAIGN]
-    response = client.get("/campaigns/campaigns/")
+    response = client.get("/campaigns/list_campaigns")
     assert response.status_code == 200
     assert len(response.json()) == 1
 
@@ -55,7 +55,7 @@ def test_get_campaign_not_found(mock_get, client):
 @patch("inquisitool.routes.campaigns.delete_campaign", new_callable=AsyncMock)
 def test_delete_campaign(mock_delete, client):
     mock_delete.return_value = None
-    response = client.delete(f"/campaigns/campaigns/{SAMPLE_CAMPAIGN['campaign_id']}")
+    response = client.delete(f"/campaigns/delete_campaign/{SAMPLE_CAMPAIGN['campaign_id']}")
     assert response.status_code == 200
     assert response.json()["message"] == "Campaign deleted successfully"
 
