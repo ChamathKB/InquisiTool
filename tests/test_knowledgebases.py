@@ -64,3 +64,43 @@ def test_delete_collection_failure(mock_delete, client):
     response = client.delete("/knowledgebases/delete_collection?collection_id=col-123")
     assert response.status_code == 500
     assert "Document deletion failed" in response.json()["detail"]
+
+
+@patch("inquisitool.routes.knowledgebases.list_knowledgebases", new_callable=AsyncMock)
+def test_list_collections(mock_list, client):
+    mock_list.return_value = [
+        {"collection_id": "col-123", "collection_name": "test_col", "uploaded_at": "2025-01-01T00:00:00"}
+    ]
+    response = client.get("/knowledgebases/")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
+@patch("inquisitool.routes.knowledgebases.list_knowledgebases", new_callable=AsyncMock)
+def test_list_collections_failure(mock_list, client):
+    mock_list.side_effect = Exception("DB error")
+    response = client.get("/knowledgebases/")
+    assert response.status_code == 500
+
+
+@patch("inquisitool.routes.knowledgebases.answer_question")
+def test_rag_chat_success(mock_answer, client):
+    mock_answer.return_value = ("The answer is 42.", [{"text": "chunk text", "score": 0.95}])
+    response = client.post(
+        "/knowledgebases/chat",
+        json={"collection_id": "col-123", "question": "What is the answer?", "history": []},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["answer"] == "The answer is 42."
+    assert data["sources"][0]["score"] == 0.95
+
+
+@patch("inquisitool.routes.knowledgebases.answer_question")
+def test_rag_chat_failure(mock_answer, client):
+    mock_answer.side_effect = Exception("LLM error")
+    response = client.post(
+        "/knowledgebases/chat",
+        json={"collection_id": "col-123", "question": "What is the answer?"},
+    )
+    assert response.status_code == 500
