@@ -4,6 +4,10 @@ import pytest
 
 from inquisitool.constants import CAMPAIGNS_COLLECTION
 
+CAMPAIGN_ID = "550e8400-e29b-41d4-a716-446655440000"
+SESSION_ID = "660e8400-e29b-41d4-a716-446655440001"
+USER_ID = "770e8400-e29b-41d4-a716-446655440002"
+
 
 @pytest.fixture
 def mock_db():
@@ -47,13 +51,13 @@ async def test_create_campaign(mock_get_db, mock_db):
 async def test_get_campaign(mock_get_db, mock_db):
     db, col, _ = mock_db
     mock_get_db.return_value = db
-    col.find_one.return_value = {"campaign_id": "c1", "_id": "oid1", "campaign_name": "Test"}
+    col.find_one.return_value = {"campaign_id": CAMPAIGN_ID, "_id": "oid1", "campaign_name": "Test"}
 
     from inquisitool.db.mongodb import get_campaign
 
-    result = await get_campaign("c1")
+    result = await get_campaign(CAMPAIGN_ID)
 
-    assert result["campaign_id"] == "c1"
+    assert result["campaign_id"] == CAMPAIGN_ID
     assert result["_id"] == "oid1"
 
 
@@ -67,7 +71,7 @@ async def test_get_campaign_not_found(mock_get_db, mock_db):
     from inquisitool.db.mongodb import get_campaign
 
     with pytest.raises(ValueError, match="Campaign not found"):
-        await get_campaign("missing")
+        await get_campaign(CAMPAIGN_ID)
 
 
 @pytest.mark.asyncio
@@ -79,7 +83,7 @@ async def test_update_campaign(mock_get_db, mock_db):
 
     from inquisitool.db.mongodb import update_campaign
 
-    result = await update_campaign("c1", {"campaign_name": "Updated"})
+    result = await update_campaign(CAMPAIGN_ID, {"campaign_name": "Updated"})
 
     assert result["modified_count"] == 1
 
@@ -94,7 +98,7 @@ async def test_update_campaign_not_found(mock_get_db, mock_db):
     from inquisitool.db.mongodb import update_campaign
 
     with pytest.raises(ValueError, match="Campaign not found"):
-        await update_campaign("missing", {})
+        await update_campaign(CAMPAIGN_ID, {})
 
 
 @pytest.mark.asyncio
@@ -106,7 +110,7 @@ async def test_delete_campaign(mock_get_db, mock_db):
 
     from inquisitool.db.mongodb import delete_campaign
 
-    result = await delete_campaign("c1")
+    result = await delete_campaign(CAMPAIGN_ID)
 
     assert result["deleted_count"] == 1
 
@@ -121,7 +125,7 @@ async def test_delete_campaign_not_found(mock_get_db, mock_db):
     from inquisitool.db.mongodb import delete_campaign
 
     with pytest.raises(ValueError, match="Campaign not found"):
-        await delete_campaign("missing")
+        await delete_campaign(CAMPAIGN_ID)
 
 
 @pytest.mark.asyncio
@@ -159,7 +163,7 @@ async def test_create_interaction(mock_get_db, mock_db):
 
     from inquisitool.db.mongodb import create_interaction
 
-    result = await create_interaction({"user_id": "u1", "campaign_id": "c1"})
+    result = await create_interaction({"user_id": USER_ID, "campaign_id": CAMPAIGN_ID})
 
     assert "session_id" in result
     assert result["session_number"] == 1
@@ -170,13 +174,13 @@ async def test_create_interaction(mock_get_db, mock_db):
 async def test_get_interaction(mock_get_db, mock_db):
     db, col, _ = mock_db
     mock_get_db.return_value = db
-    col.find_one.return_value = {"session_id": "s1", "answers": []}
+    col.find_one.return_value = {"session_id": SESSION_ID, "answers": []}
 
     from inquisitool.db.mongodb import get_interaction
 
-    result = await get_interaction("s1")
+    result = await get_interaction(SESSION_ID)
 
-    assert result["session_id"] == "s1"
+    assert result["session_id"] == SESSION_ID
 
 
 @pytest.mark.asyncio
@@ -189,7 +193,7 @@ async def test_get_interaction_not_found(mock_get_db, mock_db):
     from inquisitool.db.mongodb import get_interaction
 
     with pytest.raises(ValueError, match="Interaction not found"):
-        await get_interaction("missing")
+        await get_interaction(SESSION_ID)
 
 
 @pytest.mark.asyncio
@@ -201,7 +205,7 @@ async def test_update_interaction(mock_get_db, mock_db):
 
     from inquisitool.db.mongodb import update_interaction
 
-    result = await update_interaction("s1", {"answers": ["yes"]})
+    result = await update_interaction(SESSION_ID, {"answers": ["yes"]})
 
     assert result["modified_count"] == 1
 
@@ -216,4 +220,4 @@ async def test_update_interaction_not_found(mock_get_db, mock_db):
     from inquisitool.db.mongodb import update_interaction
 
     with pytest.raises(ValueError, match="Interaction not found"):
-        await update_interaction("missing", {})
+        await update_interaction(SESSION_ID, {})

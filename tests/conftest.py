@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi import FastAPI
 
-from inquisitool.routes import campaigns, knowledgebases, query
+from inquisitool.routes import campaigns, knowledgebases, public, query
 
 
 @pytest.fixture
@@ -36,6 +36,7 @@ def app(mock_redis, mock_qdrant):
     app.include_router(campaigns.router, prefix="/campaigns")
     app.include_router(knowledgebases.router, prefix="/knowledgebases")
     app.include_router(query.router, prefix="/query")
+    app.include_router(public.router, prefix="/public")
     return app
 
 
