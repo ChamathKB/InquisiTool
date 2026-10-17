@@ -28,8 +28,8 @@ jobs:
         run: pytest tests/
         env:
           GEMINI_API_KEY: "dummy"
-          LLM_MODEL: "dummy"
-          EMBEDDING_MODEL: "dummy"
+          LLM_MODEL: "gemini-2.5-flash"
+          EMBEDDING_MODEL: "gemini-embedding-001"
           MONGO_URL: "mongodb://localhost:27017"
           QDRANT_URL: "http://localhost:6333"
           REDIS_URL: "redis://localhost:6379"
