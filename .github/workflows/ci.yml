@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Unit Tests & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run tests
+        run: pytest tests/
+        env:
+          GEMINI_API_KEY: "dummy"
+          LLM_MODEL: "gemini-2.5-flash"
+          EMBEDDING_MODEL: "gemini-embedding-001"
+          MONGO_URL: "mongodb://localhost:27017"
+          QDRANT_URL: "http://localhost:6333"
+          REDIS_URL: "redis://localhost:6379"
+          KEYCLOAK_URL: "http://localhost:8080"
+          KEYCLOAK_REALM: "inquisitool"
+          KEYCLOAK_CLIENT_ID: "inquisitool-api"
+          KEYCLOAK_CLIENT_SECRET: "dummy"
