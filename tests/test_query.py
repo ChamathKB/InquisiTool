@@ -57,8 +57,11 @@ def test_new_survey_session(
 @patch("inquisitool.routes.query.cache_get", new_callable=AsyncMock)
 @patch("inquisitool.routes.query.cache_set", new_callable=AsyncMock)
 @patch("inquisitool.routes.query.update_interaction", new_callable=AsyncMock)
+@patch("inquisitool.routes.query.route_response", return_value="CONTINUE: general")
 @patch("inquisitool.routes.query.generate_question", return_value="Follow-up question?")
-def test_continue_survey_session(mock_gen, mock_update, mock_cache_set, mock_cache_get, mock_get_interaction, client):
+def test_continue_survey_session(
+    mock_gen, mock_route, mock_update, mock_cache_set, mock_cache_get, mock_get_interaction, client
+):
     mock_cache_get.return_value = None
     mock_get_interaction.return_value = SAMPLE_INTERACTION
 
