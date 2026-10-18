@@ -1,5 +1,9 @@
 # InquisiTool
 
+![Version](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ChamathKB/7f5f90fbdb8f37347b6ccc7d48b3fffe/raw/inquisitool_version.json)
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ChamathKB/7f5f90fbdb8f37347b6ccc7d48b3fffe/raw/inquisitool_coverage.json)
+![CI](https://github.com/ChamathKB/InquisiTool/actions/workflows/ci.yml/badge.svg?event=pull_request)
+
 AI-powered survey application that generates dynamic, context-aware survey questions using CrewAI agents and semantic search over knowledge bases.
 
 ## Features
